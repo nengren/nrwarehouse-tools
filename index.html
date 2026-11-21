@@ -393,10 +393,10 @@ const CORE = (() => {
 
   // ---- Mabang export columns ----
   const COLS = {
-    order:  ['平台交易号', '订单编号', '订单号', 'Order No.', 'Platform Order No.'],
+    order:  ['平台交易号', '订单编号', '订单号', 'Platform No.', 'Order No.', 'Platform Order No.'],
     track:  ['快递单号', 'Track No.', 'Tracking No.'],
     time:   ['发货时间', 'Time of fulfilled'],
-    packer: ['发货员', '打包员', 'Packer'],
+    packer: ['发货员', '打包员', 'Shipper', 'Packer'],
     sku:    ['库存SKU', 'SKU'],
     qty:    ['数量', 'QTY'],
     unit:   ['单位重量', 'Unit weight'],
@@ -437,7 +437,7 @@ const CORE = (() => {
     const headers = rowsText.length ? Object.keys(rowsText[0]) : [];
     const cols = findCols(headers);
     const missingCols = REQUIRED.filter(k => !cols[k]).map(k => COL_LABEL[k]);
-    if (missingCols.length) return { orders: [], errors: [], missingCols, rowCount: rowsText.length };
+    if (missingCols.length) return { orders: [], errors: [], missingCols, headers, rowCount: rowsText.length };
 
     const byNo = new Map(), errors = [];
     rowsText.forEach((r, i) => {
@@ -725,7 +725,7 @@ function renderImport() {
   if (!imp) { el.innerHTML = ''; return; }
   const P = imp.parsed;
   if (P.missingCols.length) {
-    el.innerHTML = `<div class="notice err">❌ 表格缺少这些列 Missing columns：<b>${P.missingCols.map(esc).join('、')}</b>。请在马帮导出模板里加上后重新导出 Add them to the Mabang export template and export again.</div>`;
+    el.innerHTML = `<div class="notice err">❌ 表格缺少这些列 Missing columns：<b>${P.missingCols.map(esc).join('、')}</b>。请在马帮导出模板里加上后重新导出 Add them to the Mabang export template and export again.<br><span class="muted">表里实际的列 Columns found：${(P.headers || []).map(esc).join('、') || '—'}</span></div>`;
     return;
   }
   if (!P.orders.length) { el.innerHTML = `<div class="notice err">❌ 没有读到任何订单 No orders found</div>`; return; }
