@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NR 仓库工具 Warehouse Tools</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23007AFF'/%3E%3Cpath d='M16 20h32v4H16zM16 28h32v4H16zM16 36h32v4H16zM16 44h24v4H16z' fill='white' opacity='0.9'/%3E%3Crect x='44' y='42' width='8' height='8' rx='2' fill='%2334C759'/%3E%3C/svg%3E">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f5f5f7;--card:#fff;--card-hover:#fafafa;--border:#e5e5ea;--border-light:#f2f2f7;
+  --blue:#007AFF;--blue-hover:#0056CC;--blue-light:#E3F2FF;
+  --green:#34C759;--green-light:#E8F8ED;--red:#FF3B30;--red-light:#FFE5E4;
+  --orange:#FF9500;--orange-light:#FFF3E0;--purple:#AF52DE;--purple-light:#F5EAFB;
+  --text:#1d1d1f;--text2:#6e6e73;--text3:#aeaeb2;
+  --radius:12px;--radius-sm:8px;--shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-lg:0 8px 30px rgba(0,0,0,.12);--sidebar-w:210px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+input,select,button,textarea{font-family:inherit;font-size:inherit}
+.hidden{display:none!important}
+.mono{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:.92em}
+/* layout */
+.app-shell{display:flex;height:100vh}
+.sidebar{width:var(--sidebar-w);background:rgba(255,255,255,.9);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;inset:0 auto 0 0;z-index:50}
+.sidebar-logo{padding:20px 16px 12px;font-size:15px;font-weight:700}
+.sidebar-logo small{display:block;font-size:11px;font-weight:400;color:var(--text3)}
+.sidebar-nav{flex:1;padding:4px 8px;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;color:var(--text2);font-size:13px;font-weight:500;margin-bottom:2px;user-select:none}
+.nav-item:hover{background:var(--border-light);color:var(--text)}
+.nav-item.active{background:var(--blue-light);color:var(--blue);font-weight:600}
+.nav-item .icon{font-size:17px;width:22px;text-align:center}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--text3)}
+.sidebar-footer .user-name{font-weight:600;color:var(--text2);font-size:13px}
+.sidebar-footer .link{cursor:pointer;margin-right:10px;display:inline-block;margin-top:4px}
+.sidebar-footer .link:hover{text-decoration:underline}
+.main-content{margin-left:var(--sidebar-w);flex:1;overflow-y:auto;height:100vh}
+.page{display:none;padding:24px 28px 60px;max-width:1280px}
+.page.active{display:block}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-.4px;margin-bottom:18px}
+.page-title small{font-size:13px;font-weight:400;color:var(--text2);margin-left:8px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;margin-bottom:16px}
+.card-title{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card-title .sp{flex:1}
+.muted{color:var(--text2);font-size:12px}
+/* buttons & inputs */
+.btn{padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:var(--blue-hover)}
+.btn-ghost{background:#fff;color:var(--blue);border:1px solid var(--border)}.btn-ghost:hover{background:var(--blue-light)}
+.btn-danger{background:#fff;color:var(--red);border:1px solid var(--border)}.btn-danger:hover{background:var(--red-light)}
+.btn-success{background:var(--green);color:#fff}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.input,.select{padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:#fff;font-size:13px;outline:none}
+.input:focus,.select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,122,255,.1)}
+.filter-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.filter-bar label{font-size:12px;color:var(--text2)}
+.seg{display:flex;gap:2px;background:var(--border-light);border-radius:var(--radius-sm);padding:3px}
+.seg button{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--text2)}
+.seg button.active{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+/* stats */
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.stat-box{background:var(--card);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);border:1px solid transparent}
+.stat-box .stat-label{font-size:12px;color:var(--text3);font-weight:500}
+.stat-box .stat-value{font-size:26px;font-weight:700;letter-spacing:-1px}
+.stat-box .stat-sub{font-size:12px;color:var(--text2)}
+.stat-box.click{cursor:pointer}.stat-box.click:hover{box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.stat-box.sel{outline:2.5px solid var(--text);outline-offset:-1px}
+.stat-box.c-red{background:var(--red-light);border-color:var(--red)}.stat-box.c-red .stat-value{color:var(--red)}
+.stat-box.c-orange{background:var(--orange-light);border-color:var(--orange)}.stat-box.c-orange .stat-value{color:var(--orange)}
+.stat-box.c-purple{background:var(--purple-light);border-color:var(--purple)}.stat-box.c-purple .stat-value{color:var(--purple)}
+.stat-box.c-green{background:var(--green-light);border-color:var(--green)}.stat-box.c-green .stat-value{color:var(--green)}
+/* tables */
+.tbl-wrap{overflow:auto}
+.tbl-wrap.scroll{max-height:560px}
+.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+.tbl th{text-align:left;padding:9px 10px;font-weight:600;color:var(--text2);border-bottom:2px solid var(--border);font-size:12px;white-space:nowrap;position:sticky;top:0;background:#fff;z-index:1}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--border-light);white-space:nowrap}
+.tbl tr:hover td{background:var(--card-hover)}
+.tbl .num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.tbl td.wrap{white-space:normal;word-break:break-word;max-width:300px;font-size:12px;line-height:1.5}
+.below-avg{color:var(--red)!important}
+.clickable{cursor:pointer}.clickable:hover{color:var(--blue);text-decoration:underline}
+tr.row-error td{background:var(--red-light)}tr.row-error td:first-child{box-shadow:inset 3px 0 0 var(--red)}
+tr.row-warn td{background:var(--orange-light)}tr.row-warn td:first-child{box-shadow:inset 3px 0 0 var(--orange)}
+tr.row-miss td{background:var(--purple-light)}tr.row-miss td:first-child{box-shadow:inset 3px 0 0 var(--purple)}
+tr.row-ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
+.badge{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;display:inline-block}
+.badge-blue{background:var(--blue-light);color:var(--blue)}.badge-green{background:var(--green-light);color:var(--green)}
+.badge-red{background:var(--red);color:#fff}.badge-orange{background:var(--orange);color:#fff}
+.badge-purple{background:var(--purple);color:#fff}.badge-ok{background:var(--green);color:#fff}.badge-gray{background:var(--border-light);color:var(--text2)}
+.dev-pos{color:var(--red);font-weight:600}.dev-neg{color:var(--red);font-weight:600}.dev-ok{color:var(--text2)}
+.cp{border:none;background:none;cursor:pointer;color:var(--text3);padding:0 2px;font-size:12px}.cp:hover{color:var(--blue)}
+.empty{padding:40px 20px;text-align:center;color:var(--text3)}
+/* upload */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:40px 24px;text-align:center;background:#fff;cursor:pointer;position:relative}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--blue);background:var(--blue-light)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.upload-zone h2{font-size:17px;margin-bottom:4px}
+.upload-zone p{color:var(--text2);font-size:13px}
+.notice{padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:12px}
+.notice.warn{background:var(--orange-light);color:#8a5200}
+.notice.err{background:var(--red-light);color:#a1160e}
+.notice.ok{background:var(--green-light);color:#1a7a35}
+.notice.info{background:var(--blue-light);color:#00489c}
+/* login & modal */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh}
+.login-card{background:#fff;border-radius:16px;box-shadow:var(--shadow-lg);padding:40px;width:360px}
+.login-card h1{font-size:22px;text-align:center}
+.login-card p.sub{color:var(--text2);font-size:13px;text-align:center;margin-bottom:24px}
+.field{margin-bottom:14px}
+.field label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px}
+.field input,.field select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:15px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:900;display:flex;align-items:center;justify-content:center}
+.modal{background:#fff;border-radius:16px;box-shadow:var(--shadow-lg);padding:28px;width:400px;max-width:92vw}
+.modal h2{font-size:17px;margin-bottom:14px}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.8);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999}
+.spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-overlay p{margin-top:10px;font-size:13px;color:var(--text2)}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:#fff;padding:11px 18px;border-radius:var(--radius-sm);font-size:13px;z-index:1000;box-shadow:var(--shadow-lg)}
+.detail-popup{position:fixed;z-index:500;background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-lg);padding:14px 16px;min-width:230px;max-width:380px;max-height:70vh;overflow:auto;font-size:13px}
+.detail-popup .dp-header{font-weight:700;margin-bottom:8px}
+.detail-popup .dp-row{display:flex;justify-content:space-between;gap:16px;padding:3px 0;border-bottom:1px solid var(--border-light)}
+.detail-popup .dp-row span:last-child{font-weight:700;font-variant-numeric:tabular-nums}
+.detail-popup .dp-total{display:flex;justify-content:space-between;padding-top:6px;font-weight:700;color:var(--blue)}
+.detail-popup-mask{position:fixed;inset:0;z-index:499}
+.inner-tabs{display:flex;gap:2px;margin-bottom:16px;border-bottom:2px solid var(--border-light)}
+.inner-tab{padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text2);border:none;border-bottom:2px solid transparent;margin-bottom:-2px;background:none}
+.inner-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.row-flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:1000px){.two-col{grid-template-columns:1fr}}
+/* label editor (hidden feature) */
+.we-upload{max-width:560px;margin:30px auto;padding:46px 40px;border:2px dashed var(--border);border-radius:var(--radius);text-align:center;cursor:pointer;background:#fff}
+.we-header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.we-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.we-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+.we-card.type-jt{border-color:var(--blue);border-width:2px}
+.we-card-header{padding:6px 10px;display:flex;justify-content:space-between;font-size:12px;border-bottom:1px solid var(--border-light)}
+.we-card-preview{background:#fafafa;display:flex;align-items:center;justify-content:center;min-height:140px}
+.we-card-preview canvas{max-width:100%;max-height:260px}
+.we-card-controls{padding:6px 10px;border-top:1px solid var(--border-light);display:flex;align-items:center;gap:6px}
+.we-card-controls label{font-size:11px;color:var(--text2)}
+.we-card-controls input{flex:1;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px;font-weight:600;text-align:center}
+.weight-modified{background:var(--green-light)}
+#wePrintContainer{display:none}
+@media print{
+  body>*:not(#wePrintContainer){display:none!important}
+  #wePrintContainer{display:block!important;position:absolute;top:0;left:0;width:100mm}
+  @page{size:100mm 150mm;margin:0}
+  .print-page{width:100mm;height:150mm;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .print-page+.print-page{page-break-before:always}
+  .print-page img{width:100%;height:100%;object-fit:fill}
+}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay hidden" id="globalLoading"><div class="spinner"></div><p id="loadingMsg">Loading...</p></div>
+
+<!-- ========== LOGIN ========== -->
+<div id="loginPage" class="login-wrap hidden">
+  <div class="login-card">
+    <h1>📦 NR 仓库工具</h1>
+    <p class="sub">Warehouse Tools</p>
+    <div class="field"><label>用户名 Username</label><input id="loginUser" autocomplete="username" autocapitalize="off"></div>
+    <div class="field"><label>密码 Password</label><input id="loginPwd" type="password" autocomplete="current-password"></div>
+    <button class="btn btn-primary" id="btnLogin" style="width:100%;justify-content:center;padding:11px;font-size:15px;">登录 Login</button>
+    <p id="loginError" style="color:var(--red);font-size:12px;margin-top:10px;min-height:18px;"></p>
+  </div>
+</div>
+
+<!-- ========== APP ========== -->
+<div id="appShell" class="app-shell hidden">
+  <div class="sidebar">
+    <div class="sidebar-logo">📦 NR 仓库工具<small>Warehouse Tools</small></div>
+    <div class="sidebar-nav">
+      <div class="nav-item" data-page="pageImport"><span class="icon">📥</span>导入 Import</div>
+      <div class="nav-item" data-page="pageOverview"><span class="icon">📊</span>产量总览 Output</div>
+      <div class="nav-item" data-page="pageWeight"><span class="icon">⚖️</span>称重校验 Weight</div>
+      <div class="nav-item" data-page="pagePerson"><span class="icon">👤</span>个人 Personal</div>
+      <div class="nav-item admin-only" data-page="pageAdmin"><span class="icon">⚙️</span>管理 Admin</div>
+      <div class="nav-item hidden" id="navLabel" data-page="pageLabel"><span class="icon">🏷️</span>面单重量 Label</div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-name" id="sidebarUser">-</div>
+      <span class="link" id="btnChangePwd">改密码 Password</span>
+      <span class="link" id="btnLogout" style="color:var(--red)">登出 Logout</span>
+    </div>
+  </div>
+
+  <div class="main-content">
+
+    <!-- ===== IMPORT ===== -->
+    <div class="page" id="pageImport">
+      <div class="page-title">📥 导入马帮出库表 <small>Import Mabang export</small></div>
+      <div class="upload-zone" id="impDrop">
+        <input type="file" id="impFile" accept=".xls,.xlsx,.csv">
+        <h2>点击或拖拽上传马帮导出表</h2>
+        <p>Click or drop the Mabang export (.xls / .xlsx / .csv)</p>
+        <p class="muted" style="margin-top:6px;">需要的列：平台交易号、发货时间、发货员、库存SKU、数量、单位重量、订单重量（快递单号可选）</p>
+      </div>
+      <div id="impArea" style="margin-top:16px;"></div>
+    </div>
+
+    <!-- ===== OVERVIEW ===== -->
+    <div class="page" id="pageOverview">
+      <div class="page-title">📊 产量总览 <small>Output by packer</small></div>
+      <div class="filter-bar">
+        <div class="seg" id="ovPeriod">
+          <button data-v="day" class="active">今日 Today</button>
+          <button data-v="yday">昨日 Yesterday</button>
+          <button data-v="week">本周 Week</button>
+          <button data-v="lweek">上周 Last wk</button>
+          <button data-v="month">本月 Month</button>
+          <button data-v="lmonth">上月 Last mo</button>
+          <button data-v="custom">自定义 Custom</button>
+        </div>
+        <span id="ovCustom" class="row-flex hidden">
+          <input type="date" class="input" id="ovFrom"> — <input type="date" class="input" id="ovTo">
+          <button class="btn btn-primary btn-sm" id="ovGo">查询</button>
+        </span>
+      </div>
+      <div class="filter-bar">
+        <div class="seg" id="ovCat">
+          <button data-v="dumbbell" class="active">🏋️ 哑铃 Dumbbell</button>
+          <button data-v="other">📦 其他 Other</button>
+          <button data-v="all">全部 All</button>
+        </div>
+        <span class="muted" id="ovRange"></span>
+      </div>
+      <div class="stat-row" id="ovStats"></div>
+      <div class="card">
+        <div class="card-title">发货员产量 Packer output <span class="muted" style="font-weight:400">按日均排序 · <span style="color:var(--red)">红色 = 日均低于平均</span> · 点数字看SKU明细</span></div>
+        <div class="tbl-wrap" id="ovTable"></div>
+      </div>
+    </div>
+
+    <!-- ===== WEIGHT ===== -->
+    <div class="page" id="pageWeight">
+      <div class="page-title">⚖️ 称重校验 <small>Weight check</small></div>
+      <div class="filter-bar">
+        <label>日期</label>
+        <input type="date" class="input" id="wFrom"> — <input type="date" class="input" id="wTo">
+        <label>发货员</label>
+        <select class="select" id="wEmp"><option value="">全部 All</option></select>
+        <label>阈值</label>
+        ±<input type="number" class="input" id="wPct" style="width:60px"> %
+        且 &gt; <input type="number" class="input" id="wG" style="width:70px"> g
+        <button class="btn btn-primary btn-sm" id="wGo">查询 Load</button>
+        <button class="btn btn-ghost btn-sm admin-only" id="wSaveTol">设为默认</button>
+      </div>
+      <div class="stat-row" id="wStats"></div>
+      <div class="card">
+        <div class="card-title">
+          订单明细 Orders <span class="sp"></span>
+          <input class="input" id="wSku" placeholder="按SKU/单号筛选..." style="width:180px">
+          <span class="muted" id="wCount"></span>
+          <button class="btn btn-ghost btn-sm" id="wCopyFiltered">复制当前列表单号</button>
+          <button class="btn btn-danger btn-sm" id="wCopyErr">复制全部异常单号</button>
+        </div>
+        <div class="tbl-wrap scroll" id="wTable"></div>
+      </div>
+      <div class="two-col">
+        <div class="card"><div class="card-title">发货员异常率 By packer</div><div class="tbl-wrap" id="wByEmp"></div></div>
+        <div class="card"><div class="card-title">单重缺失的 SKU（马帮单重 ≤1g，请去马帮补）</div><div class="tbl-wrap" id="wMissing"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">单重校准建议 <span class="muted" style="font-weight:400">近30天、只看单SKU订单、至少3单；"实称/件"含包材。差距大的请核对马帮单重</span></div>
+        <div class="tbl-wrap" id="wCalib"></div>
+      </div>
+    </div>
+
+    <!-- ===== PERSON ===== -->
+    <div class="page" id="pagePerson">
+      <div class="page-title">👤 个人面板 <small>Personal dashboard</small></div>
+      <div class="filter-bar">
+        <label>发货员</label><select class="select" id="pEmp" style="min-width:160px"></select>
+        <label>月份</label><input type="month" class="input" id="pMonth">
+      </div>
+      <div class="stat-row" id="pStats"></div>
+      <div class="card"><div class="card-title">每日明细 Daily <span class="muted" style="font-weight:400">点数字看SKU明细</span></div><div class="tbl-wrap" id="pTable"></div></div>
+    </div>
+
+    <!-- ===== ADMIN ===== -->
+    <div class="page" id="pageAdmin">
+      <div class="page-title">⚙️ 管理 <small>Admin</small></div>
+      <div class="inner-tabs" id="adTabs">
+        <button class="inner-tab active" data-v="acc">账号 Accounts</button>
+        <button class="inner-tab" data-v="emp">发货员 Packers</button>
+        <button class="inner-tab" data-v="sku">SKU 归类</button>
+        <button class="inner-tab" data-v="set">设置 Settings</button>
+      </div>
+      <div id="adAcc">
+        <div class="card">
+          <div class="card-title">新建账号 New account</div>
+          <div class="row-flex">
+            <input class="input" id="naUser" placeholder="用户名 username" autocapitalize="off" style="width:150px">
+            <input class="input" id="naPwd" placeholder="密码 ≥6位" style="width:140px">
+            <select class="select" id="naRole"><option value="staff">员工 Staff</option><option value="admin">管理员 Admin</option></select>
+            <button class="btn btn-primary btn-sm" id="naGo">新建 Create</button>
+          </div>
+        </div>
+        <div class="card"><div class="card-title">账号列表</div><div class="tbl-wrap" id="accList"></div></div>
+      </div>
+      <div id="adEmp" class="hidden">
+        <div class="card">
+          <div class="card-title">新增发货员 Add packer</div>
+          <div class="row-flex"><input class="input" id="neName" placeholder="姓名 Name" style="width:160px"><button class="btn btn-primary btn-sm" id="neGo">添加</button></div>
+        </div>
+        <div class="card">
+          <div class="card-title">发货员与马帮别名 <span class="muted" style="font-weight:400">马帮里的发货员名字（不分大小写）对应到哪个人。改指向会同时更新已导入的订单</span></div>
+          <div class="tbl-wrap" id="empList"></div>
+        </div>
+      </div>
+      <div id="adSku" class="hidden">
+        <div class="notice info">默认规则：SKU 以 <b>FS-</b> 或 <b>HL-</b> 开头 <b>且</b> 单重 ≥ 2000g 算哑铃，其余算其他。手动设置的优先，并会同时更新已导入订单。</div>
+        <div class="card">
+          <div class="card-title">近90天出现过的 SKU <span class="sp"></span><input class="input" id="skuSearch" placeholder="搜索 SKU..." style="width:180px"></div>
+          <div class="tbl-wrap scroll" id="skuList"></div>
+        </div>
+      </div>
+      <div id="adSet" class="hidden">
+        <div class="card">
+          <div class="card-title">切换日 Cutover date</div>
+          <p class="muted" style="margin-bottom:10px">这一天之前的产量读旧系统（手工录入），从这一天起读导入的马帮数据。一般不用改。</p>
+          <div class="row-flex"><input type="date" class="input" id="setCut"><button class="btn btn-primary btn-sm" id="setCutGo">保存</button></div>
+        </div>
+        <div class="card">
+          <div class="card-title">称重默认阈值</div>
+          <div class="row-flex">±<input type="number" class="input" id="setPct" style="width:70px"> % 且差值 &gt; <input type="number" class="input" id="setG" style="width:80px"> g <button class="btn btn-primary btn-sm" id="setTolGo">保存</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== LABEL WEIGHT EDITOR (hidden for now, kept for later) ===== -->
+    <div class="page" id="pageLabel">
+      <div class="page-title">🏷️ 面单重量修改 <small>Label Weight Editor</small></div>
+      <div id="weUploadArea" class="we-upload" onclick="document.getElementById('weFileInput').click()">
+        <h2>📄 上传面单PDF Upload Label PDF</h2>
+        <p class="muted">拖拽PDF到这里，或点击选择</p>
+        <input type="file" id="weFileInput" accept=".pdf" style="display:none;" onchange="weHandleFile(event)">
+      </div>
+      <div id="weWorkArea" class="hidden">
+        <div class="we-header">
+          <span id="weStats" class="muted"></span><div style="flex:1"></div>
+          <label class="muted">默认重量:</label>
+          <input type="text" id="weDefaultWeight" class="input" style="width:80px;text-align:center;" placeholder="5.000" onkeydown="if(event.key==='Enter')weApplyAll()">
+          <button class="btn btn-primary btn-sm" onclick="weApplyAll()">批量应用</button>
+          <button class="btn btn-ghost btn-sm" onclick="weReset()">重置</button>
+          <button class="btn btn-success btn-sm" onclick="wePrint()">🖨️ 打印</button>
+          <button class="btn btn-ghost btn-sm" onclick="weReupload()">重新上传</button>
+        </div>
+        <div class="we-grid" id="weGrid"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<div id="wePrintContainer"></div>
+
+<!-- ===================== CORE (pure logic, no DOM) ===================== -->
+<script id="core">
+const CORE = (() => {
+  const pad = n => String(n).padStart(2, '0');
+  const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parseYmd = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const addDays = (s, n) => { const d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); };
+  const weekStart = s => { const d = parseYmd(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return ymd(d); }; // Monday
+  const monthStart = s => s.slice(0, 8) + '01';
+  const monthEnd = s => { const d = parseYmd(monthStart(s)); d.setMonth(d.getMonth() + 1); d.setDate(0); return ymd(d); };
+  const daysBetween = (a, b) => Math.round((parseYmd(b) - parseYmd(a)) / 86400000) + 1;
+  const dateList = (a, b) => { const out = []; for (let s = a; s <= b; s = addDays(s, 1)) out.push(s); return out; };
+
+  // period → [from, to]
+  function periodRange(p, today) {
+    switch (p) {
+      case 'day': return [today, today];
+      case 'yday': { const y = addDays(today, -1); return [y, y]; }
+      case 'week': return [weekStart(today), today];
+      case 'lweek': { const s = addDays(weekStart(today), -7); return [s, addDays(s, 6)]; }
+      case 'month': return [monthStart(today), today];
+      case 'lmonth': { const s = monthStart(addDays(monthStart(today), -1)); return [s, monthEnd(s)]; }
+    }
+    return [today, today];
+  }
+
+  // ---- Mabang export columns ----
+  const COLS = {
+    order:  ['平台交易号', '订单编号', '订单号', 'Order No.', 'Platform Order No.'],
+    track:  ['快递单号', 'Track No.', 'Tracking No.'],
+    time:   ['发货时间', 'Time of fulfilled'],
+    packer: ['发货员', '打包员', 'Packer'],
+    sku:    ['库存SKU', 'SKU'],
+    qty:    ['数量', 'QTY'],
+    unit:   ['单位重量', 'Unit weight'],
+    weight: ['订单重量', 'Order weight'],
+  };
+  const REQUIRED = ['order', 'time', 'packer', 'sku', 'qty', 'unit', 'weight'];
+  const COL_LABEL = { order: '平台交易号', track: '快递单号', time: '发货时间', packer: '发货员', sku: '库存SKU', qty: '数量', unit: '单位重量', weight: '订单重量' };
+
+  function findCols(headers) {
+    const norm = h => String(h).trim().toLowerCase();
+    const map = {};
+    for (const [k, names] of Object.entries(COLS)) {
+      const hit = headers.find(h => names.some(n => norm(h) === norm(n)));
+      if (hit !== undefined) map[k] = hit;
+    }
+    return map;
+  }
+
+  // returns 'YYYY-MM-DD HH:MM:SS' or null
+  function parseShipTime(text, raw) {
+    const t = String(text ?? '').trim();
+    let m = t.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+    if (m) return `${m[1]}-${pad(m[2])}-${pad(m[3])} ${pad(m[4] || 0)}:${pad(m[5] || 0)}:${pad(m[6] || 0)}`;
+    if (raw instanceof Date && !isNaN(raw)) {
+      return `${ymd(raw)} ${pad(raw.getHours())}:${pad(raw.getMinutes())}:${pad(raw.getSeconds())}`;
+    }
+    if (typeof raw === 'number' && raw > 20000 && raw < 80000 && typeof XLSX !== 'undefined') {
+      const c = XLSX.SSF.parse_date_code(raw);
+      return `${c.y}-${pad(c.m)}-${pad(c.d)} ${pad(c.H)}:${pad(c.M)}:${pad(Math.floor(c.S))}`;
+    }
+    return null;
+  }
+
+  const num = v => { const n = Number(String(v ?? '').replace(/,/g, '').trim()); return isFinite(n) ? n : 0; };
+
+  // rowsText: sheet_to_json(raw:false) ; rowsRaw: sheet_to_json(raw:true, cellDates) — same order
+  function parseRows(rowsText, rowsRaw) {
+    const headers = rowsText.length ? Object.keys(rowsText[0]) : [];
+    const cols = findCols(headers);
+    const missingCols = REQUIRED.filter(k => !cols[k]).map(k => COL_LABEL[k]);
+    if (missingCols.length) return { orders: [], errors: [], missingCols, rowCount: rowsText.length };
+
+    const byNo = new Map(), errors = [];
+    rowsText.forEach((r, i) => {
+      const raw = rowsRaw[i] || {};
+      const no = String(r[cols.order] ?? '').trim();
+      if (!no) return; // blank line
+      if (/e\+/i.test(no)) { errors.push({ row: i + 2, no, msg: '平台交易号被Excel转成了科学计数法，无法识别' }); return; }
+      const sku = String(r[cols.sku] ?? '').trim();
+      const qty = num(r[cols.qty]);
+      if (!sku || qty <= 0) { errors.push({ row: i + 2, no, msg: 'SKU为空或数量≤0，已跳过该行' }); return; }
+      let o = byNo.get(no);
+      if (!o) {
+        const t = parseShipTime(r[cols.time], raw[cols.time]);
+        o = {
+          order_no: no,
+          track_no: cols.track ? String(r[cols.track] ?? '').trim() : '',
+          ship_time: t,
+          packer_raw: String(r[cols.packer] ?? '').trim(),
+          actual_weight: Math.round(num(r[cols.weight])),
+          items: [],
+        };
+        byNo.set(no, o);
+      }
+      o.items.push({ sku, qty: Math.round(qty), unit_weight: Math.round(num(r[cols.unit])) });
+    });
+    const orders = [];
+    for (const o of byNo.values()) {
+      if (!o.ship_time) { errors.push({ row: '-', no: o.order_no, msg: '发货时间为空或格式不对，整单跳过' }); continue; }
+      orders.push(o);
+    }
+    return { orders, errors, missingCols: [], rowCount: rowsText.length };
+  }
+
+  // ---- classification: FS-/HL- prefix AND unit weight >= 2000g; manual override wins ----
+  const ruleDumbbell = (sku, unit) => /^(FS|HL)-/i.test(String(sku).trim()) && (unit || 0) >= 2000;
+  function isDumbbell(sku, unit, overrides) {
+    const ov = overrides && overrides[String(sku).trim().toUpperCase()];
+    if (ov) return ov === 'dumbbell';
+    return ruleDumbbell(sku, unit);
+  }
+
+  // ---- weight status (same logic family as PackGuard, plus absolute floor + missing-unit class) ----
+  // o: {aw, tw, q, it:[[sku,qty,unit]]}  (shape returned by wh_weight_orders)
+  function weightStatus(o, tolPct, tolG) {
+    const anyMissing = (o.it || []).some(it => (it[2] || 0) <= 1);
+    const noScale = o.aw <= 0 || (anyMissing && o.aw === o.q);
+    if (noScale) return { st: 'noscale', diff: null, dp: null };
+    if (anyMissing || o.tw <= 0) return { st: 'missing', diff: null, dp: null };
+    const diff = o.aw - o.tw, dp = diff / o.tw * 100;
+    const st = (Math.abs(dp) > tolPct && Math.abs(diff) > tolG) ? 'error' : 'ok';
+    return { st, diff, dp };
+  }
+
+  return { ymd, addDays, weekStart, monthStart, monthEnd, daysBetween, dateList, periodRange,
+           findCols, parseShipTime, parseRows, ruleDumbbell, isDumbbell, weightStatus, REQUIRED };
+})();
+if (typeof module !== 'undefined') module.exports = CORE;
+</script>
+
+<!-- ===================== APP ===================== -->
+<script>
+// 与 tks_manager 同一个 Supabase 项目。anon key 本来就是公开的；数据靠登录 + 权限规则保护。
+const SB_URL = 'https://glohjxbpgqqzspytnbfm.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdsb2hqeGJwZ3FxenNweXRuYmZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwODkyODEsImV4cCI6MjA5MDY2NTI4MX0.DF10KD-ePvAoiZoEGpvai5w1HVQeUPYQIHuLa3YXCps';
+const EMAIL_DOMAIN = 'nrwh.local';   // 用户名 → 用户名@nrwh.local
+const SHOW_LABEL_EDITOR = false;      // 面单改重量：暂时隐藏
+const IMPORT_BATCH = 300;
+const MAX_RANGE_DAYS = 31;
+
+const sbc = supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+
+// ---------- state ----------
+let me = null;                 // {user_id, username, role}
+let employees = [];            // wh_employees rows
+let aliases = {};              // alias(lower) -> employee_id
+let skuOverrides = {};         // SKU(upper) -> 'dumbbell'|'other'
+let settings = { cutover_date: null, tol_pct: 10, tol_g: 50 };
+
+// ---------- helpers ----------
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = n => (n == null ? '' : Number(n).toLocaleString());
+const today = () => CORE.ymd(new Date());
+const empName = id => (employees.find(e => e.id === id) || {}).name || '?';
+const isAdmin = () => me && me.role === 'admin';
+
+function toast(msg, ms = 3000) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), ms); }
+function loading(msg) { $('loadingMsg').textContent = msg || 'Loading...'; $('globalLoading').classList.remove('hidden'); }
+function loaded() { $('globalLoading').classList.add('hidden'); }
+async function rpc(fn, args) { const { data, error } = await sbc.rpc(fn, args); if (error) throw new Error(error.message); return data; }
+async function q(promise) { const { data, error } = await promise; if (error) throw new Error(error.message); return data; }
+function copyText(txt) {
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(txt);
+  const ta = document.createElement('textarea'); ta.value = txt; ta.style.cssText = 'position:fixed;left:-9999px';
+  document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); return Promise.resolve();
+}
+function segValue(id) { const b = $(id).querySelector('button.active'); return b ? b.dataset.v : null; }
+function bindSeg(id, onChange) {
+  $(id).addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $(id).querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+    onChange(b.dataset.v);
+  });
+}
+function openPopup(ev, html) {
+  closePopup();
+  const mask = document.createElement('div'); mask.className = 'detail-popup-mask'; mask.onclick = closePopup;
+  const p = document.createElement('div'); p.className = 'detail-popup'; p.innerHTML = html;
+  document.body.append(mask, p);
+  p.style.left = Math.min(ev.clientX, window.innerWidth - 400) + 'px';
+  p.style.top = Math.min(ev.clientY + 10, window.innerHeight - p.offsetHeight - 10) + 'px';
+}
+function closePopup() { document.querySelectorAll('.detail-popup,.detail-popup-mask').forEach(el => el.remove()); }
+function modal(html, onOk) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay';
+  ov.innerHTML = `<div class="modal">${html}<div class="actions"><button class="btn btn-ghost" data-x>取消 Cancel</button><button class="btn btn-primary" data-ok>确定 OK</button></div></div>`;
+  document.body.appendChild(ov);
+  const close = () => ov.remove();
+  ov.querySelector('[data-x]').onclick = close;
+  ov.querySelector('[data-ok]').onclick = async () => { try { if (await onOk(ov) !== false) close(); } catch (e) { toast('❌ ' + e.message); } };
+  const first = ov.querySelector('input'); if (first) first.focus();
+  return ov;
+}
+function checkRange(from, to) {
+  if (!from || !to || from > to) { toast('日期范围不对 Invalid range'); return false; }
+  if (CORE.daysBetween(from, to) > 92) { toast('最多查 92 天 Max 92 days'); return false; }
+  return true;
+}
+
+// =============================================
+// AUTH
+// =============================================
+async function doLogin() {
+  const u = $('loginUser').value.trim().toLowerCase(), p = $('loginPwd').value;
+  $('loginError').textContent = '';
+  if (!u || !p) { $('loginError').textContent = '请输入用户名和密码'; return; }
+  $('btnLogin').disabled = true;
+  const { error } = await sbc.auth.signInWithPassword({ email: `${u}@${EMAIL_DOMAIN}`, password: p });
+  $('btnLogin').disabled = false;
+  if (error) { $('loginError').textContent = '用户名或密码错误 Wrong username or password'; return; }
+  $('loginPwd').value = '';
+  await afterAuth();
+}
+async function afterAuth() {
+  const { data: { session } } = await sbc.auth.getSession();
+  if (!session) return showLogin();
+  const rows = await q(sbc.from('wh_accounts').select('*').eq('user_id', session.user.id));
+  const acc = rows && rows[0];
+  if (!acc || !acc.active) {
+    await sbc.auth.signOut();
+    showLogin('此账号未启用，请联系管理员 Account not enabled');
+    return;
+  }
+  me = acc;
+  await enterApp();
+}
+function showLogin(msg) {
+  $('appShell').classList.add('hidden'); $('loginPage').classList.remove('hidden');
+  $('loginError').textContent = msg || '';
+  $('loginUser').focus();
+}
+async function doLogout() { await sbc.auth.signOut(); me = null; showLogin(); }
+function changeOwnPassword() {
+  modal(`<h2>修改我的密码 Change password</h2>
+    <div class="field"><label>新密码（至少6位）</label><input type="password" id="cpw1"></div>
+    <div class="field"><label>再输一次</label><input type="password" id="cpw2"></div>`, async ov => {
+    const a = ov.querySelector('#cpw1').value, b = ov.querySelector('#cpw2').value;
+    if (a.length < 6) { toast('至少6位'); return false; }
+    if (a !== b) { toast('两次不一致'); return false; }
+    const { error } = await sbc.auth.updateUser({ password: a });
+    if (error) throw new Error(error.message);
+    toast('✅ 密码已修改');
+  });
+}
+
+// =============================================
+// APP INIT
+// =============================================
+async function loadRefData() {
+  const [emps, als, ovs, sets] = await Promise.all([
+    q(sbc.from('wh_employees').select('id,name,active').order('name')),
+    q(sbc.from('wh_packer_alias').select('alias,employee_id')),
+    q(sbc.from('wh_sku_class').select('sku,category')),
+    q(sbc.from('wh_settings').select('key,value')),
+  ]);
+  employees = emps || [];
+  aliases = {}; (als || []).forEach(a => aliases[a.alias] = a.employee_id);
+  skuOverrides = {}; (ovs || []).forEach(o => skuOverrides[o.sku] = o.category);
+  (sets || []).forEach(s => settings[s.key] = s.value);
+}
+async function enterApp() {
+  $('loginPage').classList.add('hidden'); $('appShell').classList.remove('hidden');
+  $('sidebarUser').textContent = me.username + (isAdmin() ? ' 👑' : '');
+  document.querySelectorAll('.admin-only').forEach(el => el.classList.toggle('hidden', !isAdmin()));
+  $('navLabel').classList.toggle('hidden', !SHOW_LABEL_EDITOR);
+  loading('加载中 Loading...');
+  try { await loadRefData(); } catch (e) { toast('❌ ' + e.message); }
+  loaded();
+  const t = today();
+  $('wFrom').value = t; $('wTo').value = t;
+  $('wPct').value = settings.tol_pct; $('wG').value = settings.tol_g;
+  $('pMonth').value = t.slice(0, 7);
+  fillEmpSelects();
+  switchPage('pageImport');
+}
+function fillEmpSelects() {
+  const act = employees.filter(e => e.active);
+  $('wEmp').innerHTML = '<option value="">全部 All</option>' + act.map(e => `<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  const cur = $('pEmp').value;
+  $('pEmp').innerHTML = act.map(e => `<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  if (cur) $('pEmp').value = cur;
+}
+function switchPage(id) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === id));
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === id));
+  closePopup();
+  if (id === 'pageOverview') refreshOverview();
+  if (id === 'pageWeight') refreshWeight();
+  if (id === 'pagePerson') refreshPerson();
+  if (id === 'pageAdmin') switchAdminTab(document.querySelector('#adTabs .inner-tab.active').dataset.v);
+}
+
+// =============================================
+// IMPORT
+// =============================================
+let imp = null; // {fileName, parsed, unresolved:[{key,raw,count}], mapping:{key:id|'__new__'}, existing:Set}
+
+function readSheet(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        resolve({
+          text: XLSX.utils.sheet_to_json(ws, { raw: false, defval: '' }),
+          raw: XLSX.utils.sheet_to_json(ws, { raw: true, defval: '' }),
+        });
+      } catch (err) { reject(err); }
+    };
+    r.onerror = () => reject(new Error('读取文件失败'));
+    r.readAsArrayBuffer(file);
+  });
+}
+
+function resolvePacker(raw) {
+  const key = raw.trim().toLowerCase();
+  if (!key) return null;
+  if (aliases[key]) return aliases[key];
+  const e = employees.find(x => x.name.trim().toLowerCase() === key);
+  return e ? e.id : null;
+}
+
+async function handleImportFile(file) {
+  if (!file) return;
+  loading('读取表格 Reading...');
+  try {
+    const sheet = await readSheet(file);
+    const parsed = CORE.parseRows(sheet.text, sheet.raw);
+    imp = { fileName: file.name, parsed, mapping: {}, existing: new Set(), saved: null };
+    if (!parsed.missingCols.length && parsed.orders.length) {
+      const cnt = {};
+      parsed.orders.forEach(o => {
+        if (resolvePacker(o.packer_raw)) return;
+        const k = o.packer_raw.trim().toLowerCase();
+        cnt[k] = cnt[k] || { key: k, raw: o.packer_raw.trim() || '(空 blank)', count: 0 };
+        cnt[k].count++;
+      });
+      imp.unresolved = Object.values(cnt);
+      imp.unresolved.forEach(u => imp.mapping[u.key] = '__new__');
+      const nos = parsed.orders.map(o => o.order_no);
+      for (let i = 0; i < nos.length; i += 1000) {
+        (await rpc('wh_existing_orders', { p: nos.slice(i, i + 1000) })).forEach(n => imp.existing.add(n));
+      }
+    }
+  } catch (e) { toast('❌ ' + e.message); imp = null; }
+  loaded();
+  $('impFile').value = '';
+  renderImport();
+}
+
+function renderImport() {
+  const el = $('impArea');
+  if (!imp) { el.innerHTML = ''; return; }
+  const P = imp.parsed;
+  if (P.missingCols.length) {
+    el.innerHTML = `<div class="notice err">❌ 表格缺少这些列：<b>${P.missingCols.map(esc).join('、')}</b>。请在马帮导出模板里加上后重新导出。</div>`;
+    return;
+  }
+  if (!P.orders.length) { el.innerHTML = `<div class="notice err">❌ 没有读到任何订单</div>`; return; }
+  if (imp.saved) { renderImportResult(); return; }
+
+  const dates = P.orders.map(o => o.ship_time.slice(0, 10)).sort();
+  const missingCnt = P.orders.filter(o => o.items.some(i => i.unit_weight <= 1)).length;
+  const items = P.orders.reduce((s, o) => s + o.items.length, 0);
+
+  // per packer preview
+  const per = {};
+  P.orders.forEach(o => {
+    const id = resolvePacker(o.packer_raw);
+    const k = id ? 'id:' + id : 'raw:' + o.packer_raw.trim().toLowerCase();
+    const name = id ? empName(id) : (o.packer_raw.trim() || '(空)') + ' 🆕';
+    per[k] = per[k] || { name, orders: 0, db: 0, ot: 0 };
+    per[k].orders++;
+    o.items.forEach(it => { if (CORE.isDumbbell(it.sku, it.unit_weight, skuOverrides)) per[k].db += it.qty; else per[k].ot += it.qty; });
+  });
+
+  const empOpts = employees.filter(e => e.active).map(e => `<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  let html = `<div class="stat-row">
+    <div class="stat-box"><div class="stat-label">文件</div><div class="stat-sub" style="font-weight:600;color:var(--text);word-break:break-all">${esc(imp.fileName)}</div></div>
+    <div class="stat-box"><div class="stat-label">订单数 Orders</div><div class="stat-value">${P.orders.length}</div><div class="stat-sub">${items} 行明细</div></div>
+    <div class="stat-box"><div class="stat-label">发货日期 Dates</div><div class="stat-sub" style="font-size:14px;font-weight:600;color:var(--text)">${dates[0]}${dates[0] !== dates[dates.length - 1] ? ' ~ ' + dates[dates.length - 1] : ''}</div></div>
+    <div class="stat-box ${imp.existing.size ? 'c-orange' : ''}"><div class="stat-label">已导入过（将覆盖）</div><div class="stat-value">${imp.existing.size}</div><div class="stat-sub">不会重复计数</div></div>
+    <div class="stat-box ${missingCnt ? 'c-purple' : ''}"><div class="stat-label">含单重缺失SKU</div><div class="stat-value">${missingCnt}</div></div>
+  </div>`;
+  if (P.errors.length) {
+    html += `<div class="notice warn">⚠ ${P.errors.length} 处问题已跳过：<details style="display:inline"><summary style="display:inline;cursor:pointer">查看</summary>
+      <div style="margin-top:6px">${P.errors.slice(0, 50).map(e => `第${e.row}行 ${esc(e.no)}：${esc(e.msg)}`).join('<br>')}</div></details></div>`;
+  }
+  if (imp.unresolved.length) {
+    html += `<div class="card"><div class="card-title">🆕 没认出的发货员 — 请选择对应的人（选一次，以后自动认）</div>
+      <table class="tbl"><thead><tr><th>马帮里的名字</th><th class="num">单数</th><th>对应 Map to</th></tr></thead><tbody>
+      ${imp.unresolved.map(u => `<tr><td><b>${esc(u.raw)}</b></td><td class="num">${u.count}</td><td>
+        <select class="select imp-map" data-key="${esc(u.key)}">
+          <option value="__new__">➕ 新建员工「${esc((u.raw === '(空 blank)' ? 'UNKNOWN' : u.raw).toUpperCase())}」</option>${empOpts}
+        </select></td></tr>`).join('')}
+      </tbody></table></div>`;
+  }
+  html += `<div class="card"><div class="card-title">预览：本次各发货员产量（按SKU数量）</div>
+    <table class="tbl"><thead><tr><th>发货员</th><th class="num">单数</th><th class="num">🏋️ 哑铃</th><th class="num">📦 其他</th><th class="num">合计</th></tr></thead><tbody>
+    ${Object.values(per).sort((a, b) => (b.db + b.ot) - (a.db + a.ot)).map(p => `<tr><td>${esc(p.name)}</td><td class="num">${p.orders}</td><td class="num">${p.db}</td><td class="num">${p.ot}</td><td class="num">${p.db + p.ot}</td></tr>`).join('')}
+    </tbody></table>
+    <div class="row-flex" style="margin-top:14px;justify-content:flex-end">
+      <button class="btn btn-ghost" id="impCancel">取消</button>
+      <button class="btn btn-primary" id="impSave">✅ 确认保存 Save ${P.orders.length} 单</button>
+    </div></div>`;
+  el.innerHTML = html;
+  el.querySelectorAll('.imp-map').forEach(s => {
+    s.value = imp.mapping[s.dataset.key];
+    s.onchange = () => { imp.mapping[s.dataset.key] = s.value; };
+  });
+  $('impCancel').onclick = () => { imp = null; renderImport(); };
+  $('impSave').onclick = saveImport;
+}
+
+async function saveImport() {
+  const P = imp.parsed;
+  $('impSave').disabled = true;
+  loading('保存中 Saving...');
+  try {
+    // 1) new employees + aliases for unresolved names
+    for (const u of imp.unresolved) {
+      let id = imp.mapping[u.key];
+      if (id === '__new__') {
+        const name = (u.key ? u.raw : 'UNKNOWN').toUpperCase();
+        const exist = employees.find(e => e.name.toLowerCase() === name.toLowerCase());
+        if (exist) id = exist.id;
+        else {
+          const rows = await q(sbc.from('wh_employees').insert({ name, pin: '0000', role: 'worker', active: true }).select('id,name,active'));
+          id = rows[0].id; employees.push(rows[0]);
+        }
+      }
+      await rpc('wh_set_alias', { p_alias: u.key, p_emp: id });
+      aliases[u.key] = id;
+    }
+    // 2) remember name-matched packers as aliases too
+    const seen = new Set();
+    for (const o of P.orders) {
+      const k = o.packer_raw.trim().toLowerCase();
+      if (!k || seen.has(k) || aliases[k]) continue;
+      seen.add(k);
+      const id = resolvePacker(o.packer_raw);
+      if (id) { await q(sbc.from('wh_packer_alias').upsert({ alias: k, employee_id: id })); aliases[k] = id; }
+    }
+    // 3) orders in batches
+    const payload = P.orders.map(o => ({ ...o, employee_id: resolvePacker(o.packer_raw) || aliases[''] || null }));
+    let done = 0;
+    for (let i = 0; i < payload.length; i += IMPORT_BATCH) {
+      done += await rpc('wh_import_orders', { p: payload.slice(i, i + IMPORT_BATCH) });
+      $('loadingMsg').textContent = `保存中 Saving ${done}/${payload.length}`;
+    }
+    const dates = P.orders.map(o => o.ship_time.slice(0, 10)).sort();
+    imp.saved = { total: done, overwritten: imp.existing.size, from: dates[0], to: dates[dates.length - 1] };
+    fillEmpSelects();
+  } catch (e) {
+    toast('❌ 保存失败 ' + e.message, 6000);
+  }
+  loaded();
+  renderImport();
+}
+
+function renderImportResult() {
+  const s = imp.saved;
+  $('impArea').innerHTML = `<div class="notice ok">✅ 已保存 ${s.total} 单（新增 ${s.total - s.overwritten}，覆盖 ${s.overwritten}），发货日期 ${s.from}${s.from !== s.to ? ' ~ ' + s.to : ''}</div>
+    <div class="row-flex"><button class="btn btn-primary" id="goW">⚖️ 查看这批的称重校验</button><button class="btn btn-ghost" id="goO">📊 查看产量</button><button class="btn btn-ghost" id="goN">继续导入</button></div>`;
+  $('goW').onclick = () => { $('wFrom').value = s.from; $('wTo').value = s.to; $('wEmp').value = ''; switchPage('pageWeight'); };
+  $('goO').onclick = () => {
+    setSeg('ovPeriod', 'custom'); $('ovFrom').value = s.from; $('ovTo').value = s.to; $('ovCustom').classList.remove('hidden');
+    switchPage('pageOverview');
+  };
+  $('goN').onclick = () => { imp = null; renderImport(); };
+}
+function setSeg(id, v) { $(id).querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.v === v)); }
+
+// =============================================
+// OVERVIEW
+// =============================================
+let ovRange = null, ovData = null;
+const catVal = (r, cat) => cat === 'dumbbell' ? +r.db : cat === 'other' ? +r.ot : (+r.db + +r.ot);
+const CAT_LABEL = { dumbbell: '哑铃', other: '其他', all: '全部' };
+
+async function refreshOverview() {
+  const p = segValue('ovPeriod');
+  if (p === 'custom') {
+    const f = $('ovFrom').value, t = $('ovTo').value;
+    if (!f || !t) { $('ovTable').innerHTML = '<p class="empty">选择日期后点查询</p>'; return; }
+    if (!checkRange(f, t)) return;
+    ovRange = [f, t];
+  } else ovRange = CORE.periodRange(p, today());
+  loading('加载 Loading...');
+  try { ovData = await rpc('wh_output', { p_from: ovRange[0], p_to: ovRange[1] }); renderOverview(); }
+  catch (e) { toast('❌ ' + e.message); }
+  loaded();
+}
+
+function aggregate(rows, cat) {
+  const by = {};
+  rows.forEach(r => {
+    const v = catVal(r, cat); if (!v) return;
+    const b = by[r.e] = by[r.e] || { id: r.e, total: 0, days: new Set(), byDate: {} };
+    b.total += v; b.days.add(r.d); b.byDate[r.d] = (b.byDate[r.d] || 0) + v;
+  });
+  const list = Object.values(by).map(b => ({ ...b, nd: b.days.size, avg: b.total / b.days.size }));
+  return list;
+}
+
+function renderOverview() {
+  const cat = segValue('ovCat');
+  const [from, to] = ovRange;
+  const cut = settings.cutover_date;
+  $('ovRange').textContent = `${from}${from !== to ? ' ~ ' + to : ''}` + (cut && from < cut ? `　· ${cut} 之前为旧系统手工录入数据（旧数据只有哑铃）` : '');
+  const list = aggregate(ovData, cat).sort((a, b) => b.avg - a.avg);
+  const total = list.reduce((s, b) => s + b.total, 0);
+  const personDays = list.reduce((s, b) => s + b.nd, 0);
+  const days = new Set(ovData.filter(r => catVal(r, cat) > 0).map(r => r.d)).size;
+  const groupAvg = list.length ? list.reduce((s, b) => s + b.avg, 0) / list.length : 0;
+  $('ovStats').innerHTML = `
+    <div class="stat-box"><div class="stat-label">${CAT_LABEL[cat]} 总产量 Total</div><div class="stat-value">${fmt(total)}</div></div>
+    <div class="stat-box"><div class="stat-label">发货员 Packers</div><div class="stat-value">${list.length}</div></div>
+    <div class="stat-box"><div class="stat-label">天数 Days</div><div class="stat-value">${days}</div></div>
+    <div class="stat-box"><div class="stat-label">人均日产量 Avg/person/day</div><div class="stat-value">${personDays ? Math.round(total / personDays) : 0}</div></div>`;
+  if (!list.length) { $('ovTable').innerHTML = '<p class="empty">这段时间没有数据 No data</p>'; return; }
+  const showDates = from !== to && CORE.daysBetween(from, to) <= MAX_RANGE_DAYS;
+  const dates = showDates ? CORE.dateList(from, to).filter(d => list.some(b => b.byDate[d])) : [];
+  let h = `<table class="tbl"><thead><tr><th>发货员</th>${dates.map(d => `<th class="num">${d.slice(5)}</th>`).join('')}<th class="num">合计</th><th class="num">天数</th><th class="num">日均</th></tr></thead><tbody>`;
+  list.forEach(b => {
+    const low = b.avg < groupAvg;
+    h += `<tr><td><span class="clickable" data-person="${b.id}"><b>${esc(empName(b.id))}</b></span></td>`;
+    dates.forEach(d => { const v = b.byDate[d]; h += v ? `<td class="num clickable" data-e="${b.id}" data-f="${d}" data-t="${d}">${fmt(v)}</td>` : '<td class="num"></td>'; });
+    h += `<td class="num clickable" data-e="${b.id}" data-f="${from}" data-t="${to}">${fmt(b.total)}</td><td class="num">${b.nd}</td><td class="num ${low ? 'below-avg' : ''}">${Math.round(b.avg)}${low ? ' ↓' : ''}</td></tr>`;
+  });
+  h += '</tbody></table>';
+  $('ovTable').innerHTML = h;
+}
+
+async function showSkuDetail(ev, empId, from, to, cat) {
+  try {
+    const rows = await rpc('wh_output_detail', { p_emp: empId, p_from: from, p_to: to, p_cat: cat });
+    const total = rows.reduce((s, r) => s + Number(r[1]), 0);
+    openPopup(ev, `<div class="dp-header">${esc(empName(empId))} · ${from}${from !== to ? ' ~ ' + to : ''} · ${CAT_LABEL[cat]}</div>
+      ${rows.map(r => `<div class="dp-row"><span>${esc(r[0])}</span><span>${fmt(r[1])}</span></div>`).join('') || '<p class="muted">无</p>'}
+      <div class="dp-total"><span>合计 Total</span><span>${fmt(total)}</span></div>`);
+  } catch (e) { toast('❌ ' + e.message); }
+}
+
+// =============================================
+// WEIGHT CHECK
+// =============================================
+let wData = [], wFilter = 'all';
+const ST_ORDER = { error: 0, noscale: 1, missing: 2, ok: 3 };
+
+async function refreshWeight() {
+  const f = $('wFrom').value, t = $('wTo').value;
+  if (!f || !t || f > t) { toast('日期范围不对'); return; }
+  if (CORE.daysBetween(f, t) > MAX_RANGE_DAYS) { toast(`称重校验最多查 ${MAX_RANGE_DAYS} 天`); return; }
+  loading('加载 Loading...');
+  try {
+    const [orders, calib] = await Promise.all([
+      rpc('wh_weight_orders', { p_from: f, p_to: t, p_emp: $('wEmp').value || null }),
+      rpc('wh_sku_calibration', { p_from: CORE.addDays(t, -29), p_to: t }),
+    ]);
+    wData = orders; renderWeight(); renderCalib(calib);
+  } catch (e) { toast('❌ ' + e.message); }
+  loaded();
+}
+
+function computeWeight() {
+  const pct = Number($('wPct').value) || 0, g = Number($('wG').value) || 0;
+  return wData.map(o => ({ ...o, ...CORE.weightStatus(o, pct, g) }));
+}
+
+function filteredWeight(all) {
+  let list = wFilter === 'all' ? all : all.filter(o => o.st === wFilter);
+  const k = $('wSku').value.trim().toUpperCase();
+  if (k) list = list.filter(o => o.no.toUpperCase().includes(k) || (o.tr || '').toUpperCase().includes(k) || o.it.some(i => String(i[0]).toUpperCase().includes(k)));
+  return list.sort((a, b) => (ST_ORDER[a.st] - ST_ORDER[b.st]) || (Math.abs(b.dp || 0) - Math.abs(a.dp || 0)));
+}
+
+function renderWeight() {
+  const all = computeWeight();
+  const c = st => all.filter(o => o.st === st).length;
+  const box = (key, label, n, cls) => `<div class="stat-box click ${cls} ${wFilter === key ? 'sel' : ''}" data-wf="${key}"><div class="stat-label">${label}</div><div class="stat-value">${n}</div></div>`;
+  $('wStats').innerHTML = box('all', '全部 Total', all.length, '') + box('error', '重量异常 Anomaly', c('error'), 'c-red') +
+    box('noscale', '秤未捕获 No scale', c('noscale'), 'c-orange') + box('missing', '单重缺失 No unit wt', c('missing'), 'c-purple') + box('ok', '正常 OK', c('ok'), 'c-green');
+  const list = filteredWeight(all);
+  $('wCount').textContent = `${list.length} 单`;
+  if (!list.length) { $('wTable').innerHTML = '<p class="empty">没有订单 No orders</p>'; }
+  else {
+    $('wTable').innerHTML = `<table class="tbl"><thead><tr><th>发货时间</th><th>平台交易号</th><th>快递单号</th><th>发货员</th><th>SKU × 数量</th><th class="num">件数</th><th class="num">理论(g)</th><th class="num">实称(g)</th><th class="num">偏差</th><th>状态</th></tr></thead><tbody>
+    ${list.slice(0, 2000).map(o => {
+      const cls = { error: 'row-error', noscale: 'row-warn', missing: 'row-miss', ok: 'row-ok' }[o.st];
+      const badge = { error: `<span class="badge badge-red">异常</span> <small class="muted">${o.diff > 0 ? '超重' : '偏轻'}</small>`, noscale: '<span class="badge badge-orange">秤未捕获</span>', missing: '<span class="badge badge-purple">单重缺失</span>', ok: '<span class="badge badge-ok">正常</span>' }[o.st];
+      const dev = o.dp == null ? '—' : `${o.diff > 0 ? '+' : ''}${fmt(o.diff)}g / ${o.dp > 0 ? '+' : ''}${o.dp.toFixed(1)}%`;
+      return `<tr class="${cls}"><td class="muted">${esc(String(o.t || '').slice(5, 16).replace('T', ' '))}</td>
+        <td class="mono">${esc(o.no)} <button class="cp" data-cp="${esc(o.no)}" title="复制">⧉</button></td>
+        <td class="mono">${esc(o.tr || '')}</td><td>${esc(o.e ? empName(o.e) : o.pr)}</td>
+        <td class="wrap">${o.it.map(i => `${esc(i[0])} ×${i[1]}${i[2] <= 1 ? ' <span style="color:var(--purple)">(单重' + i[2] + ')</span>' : ''}`).join('<br>')}</td>
+        <td class="num">${o.q}</td><td class="num">${fmt(o.tw)}</td><td class="num">${fmt(o.aw)}</td>
+        <td class="num ${o.st === 'error' ? 'dev-pos' : 'dev-ok'}">${dev}</td><td>${badge}</td></tr>`;
+    }).join('')}</tbody></table>${list.length > 2000 ? '<p class="muted" style="padding:8px">只显示前 2000 单，请缩小范围</p>' : ''}`;
+  }
+  // by packer
+  const by = {};
+  all.forEach(o => { const k = o.e || 'raw:' + o.pr; const b = by[k] = by[k] || { name: o.e ? empName(o.e) : o.pr, n: 0, err: 0, checked: 0 }; b.n++; if (o.st === 'error' || o.st === 'ok') b.checked++; if (o.st === 'error') b.err++; });
+  const bl = Object.values(by).sort((a, b) => b.err - a.err || b.n - a.n);
+  $('wByEmp').innerHTML = bl.length ? `<table class="tbl"><thead><tr><th>发货员</th><th class="num">单数</th><th class="num">可校验</th><th class="num">异常</th><th class="num">异常率</th></tr></thead><tbody>
+    ${bl.map(b => `<tr><td>${esc(b.name)}</td><td class="num">${b.n}</td><td class="num">${b.checked}</td><td class="num ${b.err ? 'below-avg' : ''}">${b.err}</td><td class="num">${b.checked ? (b.err / b.checked * 100).toFixed(1) + '%' : '—'}</td></tr>`).join('')}</tbody></table>` : '<p class="empty">—</p>';
+  // missing unit weight SKUs
+  const miss = {};
+  all.forEach(o => o.it.forEach(i => { if (i[2] <= 1) { const k = String(i[0]).toUpperCase(); miss[k] = miss[k] || { sku: i[0], orders: 0 }; miss[k].orders++; } }));
+  const ml = Object.values(miss).sort((a, b) => b.orders - a.orders);
+  $('wMissing').innerHTML = ml.length ? `<table class="tbl"><thead><tr><th>SKU</th><th class="num">涉及单数</th></tr></thead><tbody>${ml.map(m => `<tr><td class="mono">${esc(m.sku)}</td><td class="num">${m.orders}</td></tr>`).join('')}</tbody></table>` : '<p class="empty">✅ 没有</p>';
+}
+
+function renderCalib(rows) {
+  $('wCalib').innerHTML = rows.length ? `<table class="tbl"><thead><tr><th>SKU</th><th class="num">马帮单重(g)</th><th class="num">实称/件 中位数(g)</th><th class="num">差</th><th class="num">样本单数</th></tr></thead><tbody>
+    ${rows.map(r => `<tr><td class="mono">${esc(r.sku)}</td><td class="num">${fmt(r.cur)}</td><td class="num">${fmt(r.med)}</td><td class="num below-avg">${r.med - r.cur > 0 ? '+' : ''}${fmt(r.med - r.cur)}</td><td class="num">${r.n}</td></tr>`).join('')}</tbody></table>` : '<p class="empty">✅ 暂无建议（数据积累几天后才会出现）</p>';
+}
+
+function copyWeight(onlyErr) {
+  const all = computeWeight();
+  const list = onlyErr ? all.filter(o => o.st === 'error') : filteredWeight(all);
+  if (!list.length) { toast('没有可复制的单号'); return; }
+  copyText(list.map(o => o.no).join('\n')).then(() => toast(`已复制 ${list.length} 个单号 Copied`));
+}
+
+// =============================================
+// PERSONAL
+// =============================================
+async function refreshPerson() {
+  const emp = $('pEmp').value, m = $('pMonth').value;
+  if (!emp || !m) { $('pTable').innerHTML = '<p class="empty">选择发货员</p>'; return; }
+  const t = today();
+  const mFrom = m + '-01', mTo = CORE.monthEnd(mFrom);
+  const wk = CORE.weekStart(t);
+  const from = [mFrom, wk].sort()[0], to = [mTo, t].sort()[1];
+  loading('加载 Loading...');
+  try {
+    const [out, wo] = await Promise.all([
+      rpc('wh_output', { p_from: from, p_to: to }),
+      rpc('wh_weight_orders', { p_from: mFrom, p_to: mTo, p_emp: emp }),
+    ]);
+    const mine = out.filter(r => r.e === emp);
+    const sum = (f, a, b) => mine.filter(r => r.d >= a && r.d <= b).reduce((s, r) => s + f(r), 0);
+    const db = r => +r.db, ot = r => +r.ot, all = r => +r.db + +r.ot;
+    const mRows = mine.filter(r => r.d >= mFrom && r.d <= mTo && all(r) > 0);
+    const mDays = new Set(mRows.map(r => r.d)).size;
+    const pct = settings.tol_pct, g = settings.tol_g;
+    const ws = wo.map(o => CORE.weightStatus(o, pct, g).st);
+    const checked = ws.filter(s => s === 'error' || s === 'ok').length, errs = ws.filter(s => s === 'error').length;
+    const mTotal = sum(all, mFrom, mTo);
+    $('pStats').innerHTML = `
+      <div class="stat-box"><div class="stat-label">今日 Today</div><div class="stat-value" style="color:var(--blue)">${fmt(sum(all, t, t))}</div><div class="stat-sub">哑铃 ${fmt(sum(db, t, t))} · 其他 ${fmt(sum(ot, t, t))}</div></div>
+      <div class="stat-box"><div class="stat-label">本周 Week (周一起)</div><div class="stat-value">${fmt(sum(all, wk, t))}</div><div class="stat-sub">哑铃 ${fmt(sum(db, wk, t))} · 其他 ${fmt(sum(ot, wk, t))}</div></div>
+      <div class="stat-box"><div class="stat-label">${m} 月合计</div><div class="stat-value">${fmt(mTotal)}</div><div class="stat-sub">哑铃 ${fmt(sum(db, mFrom, mTo))} · 其他 ${fmt(sum(ot, mFrom, mTo))}</div></div>
+      <div class="stat-box"><div class="stat-label">${m} 出勤天数 / 日均</div><div class="stat-value">${mDays}</div><div class="stat-sub">日均 ${mDays ? Math.round(mTotal / mDays) : 0}</div></div>
+      <div class="stat-box ${errs ? 'c-red' : ''}"><div class="stat-label">${m} 称重异常</div><div class="stat-value">${errs}</div><div class="stat-sub">可校验 ${checked} 单 · 异常率 ${checked ? (errs / checked * 100).toFixed(1) + '%' : '—'}</div></div>`;
+    const errByDay = {}, ordByDay = {};
+    wo.forEach((o, i) => { const d = String(o.t).slice(0, 10); ordByDay[d] = (ordByDay[d] || 0) + 1; if (ws[i] === 'error') errByDay[d] = (errByDay[d] || 0) + 1; });
+    const daysList = [...new Set(mRows.map(r => r.d))].sort().reverse();
+    $('pTable').innerHTML = daysList.length ? `<table class="tbl"><thead><tr><th>日期</th><th class="num">🏋️ 哑铃</th><th class="num">📦 其他</th><th class="num">合计</th><th class="num">订单数</th><th class="num">称重异常</th></tr></thead><tbody>
+      ${daysList.map(d => { const rs = mRows.filter(r => r.d === d); const a = rs.reduce((s, r) => s + db(r), 0), b = rs.reduce((s, r) => s + ot(r), 0);
+        return `<tr><td>${d}</td><td class="num ${a ? 'clickable' : ''}" data-e="${emp}" data-f="${d}" data-t="${d}" data-c="dumbbell">${a || ''}</td><td class="num ${b ? 'clickable' : ''}" data-e="${emp}" data-f="${d}" data-t="${d}" data-c="other">${b || ''}</td>
+        <td class="num clickable" data-e="${emp}" data-f="${d}" data-t="${d}" data-c="all">${a + b}</td><td class="num">${ordByDay[d] || (d < (settings.cutover_date || '') ? '旧' : '')}</td><td class="num ${errByDay[d] ? 'below-avg' : ''}">${errByDay[d] || ''}</td></tr>`; }).join('')}
+      </tbody></table>` : '<p class="empty">这个月没有数据</p>';
+  } catch (e) { toast('❌ ' + e.message); }
+  loaded();
+}
+
+// =============================================
+// ADMIN
+// =============================================
+function switchAdminTab(v) {
+  document.querySelectorAll('#adTabs .inner-tab').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+  ['acc', 'emp', 'sku', 'set'].forEach(k => $('ad' + k[0].toUpperCase() + k.slice(1)).classList.toggle('hidden', k !== v));
+  if (v === 'acc') loadAccounts();
+  if (v === 'emp') renderEmpAdmin();
+  if (v === 'sku') loadSkuAdmin();
+  if (v === 'set') { $('setCut').value = settings.cutover_date || ''; $('setPct').value = settings.tol_pct; $('setG').value = settings.tol_g; }
+}
+
+// ---- accounts ----
+let accounts = [];
+async function loadAccounts() {
+  try { accounts = await q(sbc.from('wh_accounts').select('*').order('created_at')); }
+  catch (e) { toast('❌ ' + e.message); return; }
+  $('accList').innerHTML = `<table class="tbl"><thead><tr><th>用户名</th><th>角色</th><th>状态</th><th>创建</th><th></th></tr></thead><tbody>
+    ${accounts.map(a => `<tr style="${a.active ? '' : 'opacity:.45'}"><td><b>${esc(a.username)}</b>${a.user_id === me.user_id ? ' <span class="badge badge-blue">我</span>' : ''}</td>
+      <td>${a.role === 'admin' ? '<span class="badge badge-blue">管理员</span>' : '<span class="badge badge-green">员工</span>'}</td>
+      <td>${a.active ? '启用' : '停用'}</td><td class="muted">${String(a.created_at).slice(0, 10)}</td>
+      <td>${a.user_id === me.user_id ? '' : `<button class="btn btn-ghost btn-sm" data-acc-pw="${a.user_id}">重设密码</button>
+        <button class="btn btn-ghost btn-sm" data-acc-role="${a.user_id}">${a.role === 'admin' ? '改为员工' : '设为管理员'}</button>
+        <button class="btn ${a.active ? 'btn-danger' : 'btn-ghost'} btn-sm" data-acc-act="${a.user_id}">${a.active ? '停用' : '启用'}</button>`}</td></tr>`).join('')}
+    </tbody></table>`;
+}
+async function createAccount() {
+  const u = $('naUser').value.trim().toLowerCase(), p = $('naPwd').value, role = $('naRole').value;
+  if (!/^[a-z0-9._-]{2,30}$/.test(u)) { toast('用户名只能用英文小写、数字、点、横线，2-30位'); return; }
+  if (p.length < 6) { toast('密码至少6位'); return; }
+  loading('创建中...');
+  try {
+    // 用单独的请求注册，不影响当前管理员的登录状态
+    const res = await fetch(`${SB_URL}/auth/v1/signup`, { method: 'POST', headers: { apikey: SB_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: `${u}@${EMAIL_DOMAIN}`, password: p }) });
+    const j = await res.json();
+    if (!res.ok) throw new Error(j.msg || j.error_description || j.message || ('HTTP ' + res.status));
+    const user = j.user || j;
+    if (!user.id) throw new Error('注册返回异常');
+    if (!j.access_token && !user.email_confirmed_at && !user.confirmed_at) {
+      toast('⚠ Supabase 开着"邮箱确认"，新账号登录不了。请按说明关掉 Confirm email', 8000);
+    }
+    await rpc('wh_admin_add_account', { p_user: user.id, p_username: u, p_role: role });
+    $('naUser').value = ''; $('naPwd').value = '';
+    toast('✅ 已创建 ' + u);
+    loadAccounts();
+  } catch (e) {
+    toast('❌ ' + (/already registered|already exists/i.test(e.message) ? '这个用户名已经存在' : e.message), 6000);
+  }
+  loaded();
+}
+
+// ---- packers & aliases ----
+function renderEmpAdmin() {
+  const byEmp = {};
+  Object.entries(aliases).forEach(([a, id]) => (byEmp[id] = byEmp[id] || []).push(a));
+  const list = [...employees].sort((a, b) => (b.active - a.active) || a.name.localeCompare(b.name));
+  $('empList').innerHTML = `<table class="tbl"><thead><tr><th>姓名</th><th>马帮别名</th><th>状态</th><th></th></tr></thead><tbody>
+    ${list.map(e => `<tr style="${e.active ? '' : 'opacity:.45'}"><td><b>${esc(e.name)}</b></td>
+      <td>${(byEmp[e.id] || []).map(a => `<span class="badge badge-gray mono">${esc(a)}</span> `).join('')}<button class="btn btn-ghost btn-sm" data-alias-add="${e.id}">+ 别名</button></td>
+      <td>${e.active ? '在职' : '停用'}</td>
+      <td><button class="btn btn-ghost btn-sm" data-emp-ren="${e.id}">改名</button>
+        <button class="btn ${e.active ? 'btn-danger' : 'btn-ghost'} btn-sm" data-emp-act="${e.id}">${e.active ? '停用' : '启用'}</button></td></tr>`).join('')}
+    </tbody></table>`;
+}
+async function addEmployee() {
+  const name = $('neName').value.trim().toUpperCase();
+  if (!name) return;
+  if (employees.some(e => e.name.toLowerCase() === name.toLowerCase())) { toast('已存在'); return; }
+  try {
+    const rows = await q(sbc.from('wh_employees').insert({ name, pin: '0000', role: 'worker', active: true }).select('id,name,active'));
+    employees.push(rows[0]); $('neName').value = ''; fillEmpSelects(); renderEmpAdmin(); toast('✅ 已添加');
+  } catch (e) { toast('❌ ' + e.message); }
+}
+
+// ---- SKU classification ----
+let skuRows = [];
+async function loadSkuAdmin() {
+  loading('加载 SKU...');
+  try { skuRows = await rpc('wh_sku_list', { p_days: 90 }); renderSkuAdmin(); } catch (e) { toast('❌ ' + e.message); }
+  loaded();
+}
+function renderSkuAdmin() {
+  const k = $('skuSearch').value.trim().toUpperCase();
+  const list = k ? skuRows.filter(r => r.sku.includes(k)) : skuRows;
+  $('skuList').innerHTML = list.length ? `<table class="tbl"><thead><tr><th>SKU</th><th class="num">单重(g)</th><th class="num">近90天件数</th><th>当前归类</th><th>来源</th><th></th></tr></thead><tbody>
+    ${list.slice(0, 500).map(r => `<tr><td class="mono">${esc(r.sku)}</td><td class="num">${fmt(r.uw)}</td><td class="num">${fmt(r.n)}</td>
+      <td>${r.db ? '🏋️ 哑铃' : '📦 其他'}</td><td class="muted">${r.ov ? '手动' : '规则'}</td>
+      <td><button class="btn btn-ghost btn-sm" data-sku="${esc(r.sku)}" data-cat="${r.db ? 'other' : 'dumbbell'}">改为${r.db ? '其他' : '哑铃'}</button>
+      ${r.ov ? `<button class="btn btn-ghost btn-sm" data-sku="${esc(r.sku)}" data-cat="">恢复规则</button>` : ''}</td></tr>`).join('')}
+    </tbody></table>` : '<p class="empty">还没有导入数据</p>';
+}
+async function setSkuClass(sku, cat) {
+  loading('更新中...');
+  try {
+    await rpc('wh_set_sku_class', { p_sku: sku, p_cat: cat || null });
+    if (cat) skuOverrides[sku] = cat; else delete skuOverrides[sku];
+    skuRows = await rpc('wh_sku_list', { p_days: 90 }); renderSkuAdmin(); toast('✅ 已更新，历史订单同步更新');
+  } catch (e) { toast('❌ ' + e.message); }
+  loaded();
+}
+
+// ---- settings ----
+async function saveSetting(key, value) {
+  await q(sbc.from('wh_settings').upsert({ key, value, updated_at: new Date().toISOString() }));
+  settings[key] = value;
+}
+
+// =============================================
+// EVENT WIRING
+// =============================================
+function wire() {
+  $('btnLogin').onclick = doLogin;
+  $('loginPwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  $('loginUser').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginPwd').focus(); });
+  $('btnLogout').onclick = doLogout;
+  $('btnChangePwd').onclick = changeOwnPassword;
+  document.querySelector('.sidebar-nav').addEventListener('click', e => { const n = e.target.closest('.nav-item'); if (n) switchPage(n.dataset.page); });
+
+  // import
+  $('impFile').onchange = e => handleImportFile(e.target.files[0]);
+  const dz = $('impDrop');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); handleImportFile(e.dataTransfer.files[0]); });
+
+  // overview
+  bindSeg('ovPeriod', v => { $('ovCustom').classList.toggle('hidden', v !== 'custom'); if (v !== 'custom') refreshOverview(); });
+  bindSeg('ovCat', () => { if (ovData) renderOverview(); });
+  $('ovGo').onclick = refreshOverview;
+  $('ovTable').addEventListener('click', e => {
+    const p = e.target.closest('[data-person]');
+    if (p) { $('pEmp').value = p.dataset.person; if (ovRange) $('pMonth').value = ovRange[1].slice(0, 7); switchPage('pagePerson'); return; }
+    const c = e.target.closest('[data-e]');
+    if (c) showSkuDetail(e, c.dataset.e, c.dataset.f, c.dataset.t, segValue('ovCat'));
+  });
+
+  // weight
+  $('wGo').onclick = refreshWeight;
+  $('wEmp').onchange = refreshWeight;
+  ['wPct', 'wG'].forEach(id => $(id).addEventListener('input', renderWeight));
+  $('wSku').addEventListener('input', renderWeight);
+  $('wStats').addEventListener('click', e => { const b = e.target.closest('[data-wf]'); if (b) { wFilter = wFilter === b.dataset.wf ? 'all' : b.dataset.wf; renderWeight(); } });
+  $('wTable').addEventListener('click', e => { const b = e.target.closest('[data-cp]'); if (b) copyText(b.dataset.cp).then(() => toast('已复制 ' + b.dataset.cp, 1200)); });
+  $('wCopyFiltered').onclick = () => copyWeight(false);
+  $('wCopyErr').onclick = () => copyWeight(true);
+  $('wSaveTol').onclick = async () => {
+    try { await saveSetting('tol_pct', Number($('wPct').value)); await saveSetting('tol_g', Number($('wG').value)); toast('✅ 已设为默认'); } catch (e) { toast('❌ ' + e.message); }
+  };
+
+  // person
+  $('pEmp').onchange = refreshPerson;
+  $('pMonth').onchange = refreshPerson;
+  $('pTable').addEventListener('click', e => { const c = e.target.closest('.clickable[data-e]'); if (c) showSkuDetail(e, c.dataset.e, c.dataset.f, c.dataset.t, c.dataset.c); });
+
+  // admin
+  $('adTabs').addEventListener('click', e => { const b = e.target.closest('.inner-tab'); if (b) switchAdminTab(b.dataset.v); });
+  $('naGo').onclick = createAccount;
+  $('accList').addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const id = b.dataset.accPw || b.dataset.accRole || b.dataset.accAct;
+    const a = accounts.find(x => x.user_id === id); if (!a) return;
+    if (b.dataset.accPw) {
+      modal(`<h2>重设 ${esc(a.username)} 的密码</h2><div class="field"><label>新密码（至少6位）</label><input id="rpw"></div>`, async ov => {
+        const p = ov.querySelector('#rpw').value; if (p.length < 6) { toast('至少6位'); return false; }
+        await rpc('wh_admin_set_password', { p_user: id, p_pw: p }); toast('✅ 已重设');
+      });
+      return;
+    }
+    try {
+      if (b.dataset.accRole) await rpc('wh_admin_update_account', { p_user: id, p_role: a.role === 'admin' ? 'staff' : 'admin', p_active: a.active });
+      if (b.dataset.accAct) await rpc('wh_admin_update_account', { p_user: id, p_role: a.role, p_active: !a.active });
+      loadAccounts();
+    } catch (err) { toast('❌ ' + err.message); }
+  });
+  $('neGo').onclick = addEmployee;
+  $('empList').addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.aliasAdd) {
+      const emp = employees.find(x => x.id === b.dataset.aliasAdd);
+      modal(`<h2>给 ${esc(emp.name)} 加马帮别名</h2><div class="field"><label>马帮里的发货员名字（不分大小写）</label><input id="nal"></div>
+        <p class="muted">如果这个名字之前指向别人，已导入的订单会改算到 ${esc(emp.name)}</p>`, async ov => {
+        const a = ov.querySelector('#nal').value.trim().toLowerCase(); if (!a) return false;
+        const n = await rpc('wh_set_alias', { p_alias: a, p_emp: emp.id }); aliases[a] = emp.id;
+        toast(`✅ 已保存，更新了 ${n} 单`); renderEmpAdmin();
+      });
+    }
+    if (b.dataset.empRen) {
+      const emp = employees.find(x => x.id === b.dataset.empRen);
+      modal(`<h2>改名</h2><div class="field"><label>新名字</label><input id="ren" value="${esc(emp.name)}"></div>`, async ov => {
+        const n = ov.querySelector('#ren').value.trim().toUpperCase(); if (!n) return false;
+        await q(sbc.from('wh_employees').update({ name: n }).eq('id', emp.id)); emp.name = n; fillEmpSelects(); renderEmpAdmin();
+      });
+    }
+    if (b.dataset.empAct) {
+      const emp = employees.find(x => x.id === b.dataset.empAct);
+      try { await q(sbc.from('wh_employees').update({ active: !emp.active }).eq('id', emp.id)); emp.active = !emp.active; fillEmpSelects(); renderEmpAdmin(); } catch (err) { toast('❌ ' + err.message); }
+    }
+  });
+  $('skuSearch').addEventListener('input', renderSkuAdmin);
+  $('skuList').addEventListener('click', e => { const b = e.target.closest('[data-sku]'); if (b) setSkuClass(b.dataset.sku, b.dataset.cat); });
+  $('setCutGo').onclick = async () => {
+    const v = $('setCut').value; if (!v) return;
+    if (!confirm(`切换日改为 ${v}？\n${v} 之前读旧手工数据，之后读导入数据。`)) return;
+    try { await saveSetting('cutover_date', v); toast('✅ 已保存'); } catch (e) { toast('❌ ' + e.message); }
+  };
+  $('setTolGo').onclick = async () => {
+    try { await saveSetting('tol_pct', Number($('setPct').value)); await saveSetting('tol_g', Number($('setG').value)); $('wPct').value = settings.tol_pct; $('wG').value = settings.tol_g; toast('✅ 已保存'); } catch (e) { toast('❌ ' + e.message); }
+  };
+}
+
+// =============================================
+// LABEL WEIGHT EDITOR (原面单改重量，暂时隐藏；SHOW_LABEL_EDITOR=true 可打开)
+// =============================================
+const WE_RENDER_SCALE = 2.5, WE_PREVIEW_SCALE = 1.2;
+let wePdfDoc = null, wePdfBuf = null, wePages = [];
+function weLoadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve();
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload = () => { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; res(); };
+    s.onerror = rej; document.head.appendChild(s);
+  });
+}
+function weHandleFile(e) { const f = e.target.files[0]; if (f) weProcessFile(f); }
+async function weProcessFile(file) {
+  loading('读取PDF Reading PDF...');
+  try {
+    await weLoadPdfJs();
+    wePdfBuf = await file.arrayBuffer();
+    wePdfDoc = await pdfjsLib.getDocument({ data: wePdfBuf.slice(0) }).promise;
+    wePages = [];
+    for (let i = 1; i <= wePdfDoc.numPages; i++) { $('loadingMsg').textContent = `处理 ${i}/${wePdfDoc.numPages}...`; wePages.push(await weProcessPage(i)); }
+    $('weUploadArea').classList.add('hidden'); $('weWorkArea').classList.remove('hidden');
+    weRenderStats(); weRenderGrid();
+  } catch (e) { alert('PDF处理失败: ' + e.message); }
+  loaded();
+}
+async function weProcessPage(num) {
+  const page = await wePdfDoc.getPage(num);
+  const vp = page.getViewport({ scale: WE_PREVIEW_SCALE });
+  const canvas = document.createElement('canvas'); canvas.width = vp.width; canvas.height = vp.height;
+  await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+  const items = (await page.getTextContent()).items;
+  const full = items.map(t => t.str).join(' ');
+  let type = 'other', weightInfo = null, origWeight = '';
+  if (/Sku\/Qty|Total:\d/i.test(full)) type = 'picking_slip';
+  else if (/JT\d{10,}/i.test(full) && /TT Order ID/i.test(full) && /\d+\.\d{3}\s*KG/i.test(full)) {
+    type = 'jt_tiktok';
+    weightInfo = weFindWeight(items, page.getViewport({ scale: WE_RENDER_SCALE }));
+    if (weightInfo) origWeight = weightInfo.value;
+  }
+  if (type === 'jt_tiktok' && weightInfo) {
+    const r = WE_PREVIEW_SCALE / WE_RENDER_SCALE, ctx = canvas.getContext('2d');
+    ctx.strokeStyle = 'red'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+    ctx.strokeRect(weightInfo.x * r - 1, weightInfo.y * r, weightInfo.width * r + 2, weightInfo.height * r + 1); ctx.setLineDash([]);
+  }
+  return { pageNum: num, type, canvas, items, weightInfo, origWeight, newWeight: '' };
+}
+function weFindWeight(items, vp) {
+  for (const it of items) { const m = it.str.match(/(\d+\.\d{3})\s*KG/i); if (m) return weBuildBBox(it, m, vp); }
+  for (let i = 0; i < items.length; i++) {
+    if (/Weight/i.test(items[i].str)) {
+      const sm = items[i].str.match(/Weight[:\s]*(\d+\.\d{3})\s*KG/i);
+      if (sm) return weBuildBBoxCombined(items[i], sm, vp);
+      for (let j = i + 1; j < Math.min(i + 5, items.length); j++) { const nm = items[j].str.match(/(\d+\.?\d*)\s*KG/i); if (nm) return weBuildBBox(items[j], nm, vp); }
+    }
+  }
+  return null;
+}
+function weBuildBBox(item, match, vp) {
+  const fs = Math.abs(item.transform[0]) || Math.abs(item.transform[3]);
+  const [cx, cy] = vp.convertToViewportPoint(item.transform[4], item.transform[5]);
+  const ms = item.str.indexOf(match[0]);
+  const ox = ms > 0 ? (ms / item.str.length) * item.width * vp.scale : 0;
+  const sfs = fs * vp.scale, tw = item.width * vp.scale, mw = (match[0].length / item.str.length) * tw;
+  return { value: match[1], x: cx + ox, y: cy - sfs * 0.75, width: mw * 1.15, height: sfs * 1.1, fontSize: sfs };
+}
+function weBuildBBoxCombined(item, match, vp) {
+  const fs = Math.abs(item.transform[0]) || Math.abs(item.transform[3]);
+  const [cx, cy] = vp.convertToViewportPoint(item.transform[4], item.transform[5]);
+  const vs = item.str.indexOf(match[1]), sfs = fs * vp.scale, tw = item.width * vp.scale;
+  const ox = (vs / item.str.length) * tw, vw = ((match[1] + ' KG').length / item.str.length) * tw;
+  return { value: match[1], x: cx + ox, y: cy - sfs * 0.75, width: vw * 1.2, height: sfs * 1.1, fontSize: sfs };
+}
+function weRenderStats() {
+  const jt = wePages.filter(p => p.type === 'jt_tiktok').length, pk = wePages.filter(p => p.type === 'picking_slip').length;
+  $('weStats').textContent = `共${wePages.length}页 | J&T: ${jt} | 拣货单: ${pk}`;
+}
+function weRenderGrid() {
+  const grid = $('weGrid'); grid.innerHTML = '';
+  wePages.forEach((pd, idx) => {
+    const card = document.createElement('div');
+    card.className = 'we-card' + (pd.type === 'jt_tiktok' ? ' type-jt' : '');
+    const label = pd.type === 'jt_tiktok' ? 'J&T TikTok' : pd.type === 'picking_slip' ? '拣货单' : '其他';
+    card.innerHTML = `<div class="we-card-header"><span>P${pd.pageNum}</span><span class="badge ${pd.type === 'jt_tiktok' ? 'badge-blue' : 'badge-green'}">${label}</span></div>`;
+    const prev = document.createElement('div'); prev.className = 'we-card-preview'; prev.appendChild(pd.canvas); card.appendChild(prev);
+    if (pd.type === 'jt_tiktok') {
+      const ctrl = document.createElement('div');
+      ctrl.className = 'we-card-controls' + (pd.newWeight ? ' weight-modified' : ''); ctrl.id = `wectrl-${idx}`;
+      ctrl.innerHTML = `<label>${pd.origWeight ? `原${pd.origWeight}KG →` : '未检测'}</label>
+        <input type="text" id="wew-${idx}" value="${pd.newWeight || ''}" placeholder="${pd.origWeight || '0.000'}" onchange="weApplySingle(${idx})" onkeydown="if(event.key==='Enter')weApplySingle(${idx})"><span class="muted">KG</span>`;
+      card.appendChild(ctrl);
+    }
+    grid.appendChild(card);
+  });
+}
+function weNormalize(v) { const s = String(v).trim().replace(/[^0-9.]/g, ''); if (!s) return null; const n = parseFloat(s); return (isNaN(n) || n <= 0) ? null : n.toFixed(3); }
+function weApplyAll() {
+  const w = weNormalize($('weDefaultWeight').value); if (!w) { toast('请输入有效重量'); return; }
+  let c = 0;
+  wePages.forEach((pd, i) => { if (pd.type === 'jt_tiktok' && pd.weightInfo) { const inp = $(`wew-${i}`); if (inp) inp.value = w; pd.newWeight = w; c++; } });
+  weUpdateAllPreviews(); toast(`已应用到${c}张面单`);
+}
+async function weApplySingle(idx) { const inp = $(`wew-${idx}`); const w = weNormalize(inp.value); if (!w) { inp.value = ''; return; } inp.value = w; wePages[idx].newWeight = w; await weUpdatePreview(idx); }
+async function weUpdateAllPreviews() { for (let i = 0; i < wePages.length; i++) if (wePages[i].type === 'jt_tiktok' && wePages[i].newWeight && wePages[i].weightInfo) await weUpdatePreview(i); }
+async function weUpdatePreview(idx) {
+  const pd = wePages[idx]; if (!pd.weightInfo || !pd.newWeight) return;
+  const page = await wePdfDoc.getPage(pd.pageNum), vp = page.getViewport({ scale: WE_PREVIEW_SCALE }), ctx = pd.canvas.getContext('2d');
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+  const r = WE_PREVIEW_SCALE / WE_RENDER_SCALE, b = pd.weightInfo;
+  ctx.fillStyle = 'white'; ctx.fillRect(b.x * r - 1, b.y * r, b.width * r + 4, b.height * r + 1);
+  ctx.fillStyle = 'black'; ctx.font = `${b.fontSize * r * 0.85}px Arial`; ctx.textBaseline = 'top';
+  ctx.fillText(`${pd.newWeight} KG`, b.x * r, b.y * r + (b.height * r - b.fontSize * r * 0.85) / 2);
+  const ctrl = $(`wectrl-${idx}`); if (ctrl) ctrl.classList.add('weight-modified');
+}
+function weReset() {
+  if (!confirm('重置所有修改？')) return;
+  wePages.forEach((pd, i) => { if (pd.type === 'jt_tiktok') { pd.newWeight = ''; const inp = $(`wew-${i}`); if (inp) inp.value = ''; const c = $(`wectrl-${i}`); if (c) c.classList.remove('weight-modified'); } });
+  (async () => { for (const pd of wePages) if (pd.type === 'jt_tiktok') { const pg = await wePdfDoc.getPage(pd.pageNum); await pg.render({ canvasContext: pd.canvas.getContext('2d'), viewport: pg.getViewport({ scale: WE_PREVIEW_SCALE }) }).promise; } })();
+}
+async function wePrint() {
+  loading('准备打印...');
+  const pc = $('wePrintContainer'); pc.innerHTML = '';
+  try {
+    const fresh = await pdfjsLib.getDocument({ data: wePdfBuf.slice(0) }).promise;
+    for (const pd of wePages) {
+      const pg = await fresh.getPage(pd.pageNum), vp = pg.getViewport({ scale: WE_RENDER_SCALE });
+      const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
+      const ctx = c.getContext('2d'); await pg.render({ canvasContext: ctx, viewport: vp }).promise;
+      if (pd.type === 'jt_tiktok' && pd.newWeight && pd.weightInfo) {
+        const b = pd.weightInfo;
+        ctx.fillStyle = 'white'; ctx.fillRect(b.x - 1, b.y, b.width + 4, b.height + 1);
+        ctx.fillStyle = 'black'; ctx.font = `${b.fontSize * 0.85}px Arial`; ctx.textBaseline = 'top';
+        ctx.fillText(`${pd.newWeight} KG`, b.x, b.y + (b.height - b.fontSize * 0.85) / 2);
+      }
+      const img = document.createElement('img'); img.src = c.toDataURL('image/png');
+      const div = document.createElement('div'); div.className = 'print-page'; div.appendChild(img); pc.appendChild(div);
+    }
+    loaded(); setTimeout(() => window.print(), 800);
+  } catch (e) { loaded(); alert('打印失败: ' + e.message); }
+}
+function weReupload() {
+  if (wePages.some(p => p.newWeight) && !confirm('有未打印的修改，确定重新上传？')) return;
+  wePdfDoc = null; wePdfBuf = null; wePages = [];
+  $('weUploadArea').classList.remove('hidden'); $('weWorkArea').classList.add('hidden');
+  $('weGrid').innerHTML = ''; $('weFileInput').value = ''; $('weDefaultWeight').value = '';
+}
+
+// =============================================
+// BOOT
+// =============================================
+wire();
+(async function boot() {
+  try {
+    const { data: { session } } = await sbc.auth.getSession();
+    if (session) await afterAuth(); else showLogin();
+  } catch (e) { showLogin('连接失败 ' + e.message); }
+})();
+</script>
+</body>
+</html>
