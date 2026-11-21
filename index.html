@@ -81,7 +81,8 @@ input,select,button,textarea{font-family:inherit;font-size:inherit}
 .tbl td{padding:8px 10px;border-bottom:1px solid var(--border-light);white-space:nowrap}
 .tbl tr:hover td{background:var(--card-hover)}
 .tbl .num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
-.tbl td.wrap{white-space:normal;word-break:break-word;max-width:300px;font-size:12px;line-height:1.5}
+.tbl td.wrap{white-space:normal;word-break:break-word;min-width:200px;max-width:300px;font-size:12px;line-height:1.5}
+.tbl th .en{font-weight:400;color:var(--text3);font-size:11px}
 .below-avg{color:var(--red)!important}
 .clickable{cursor:pointer}.clickable:hover{color:var(--blue);text-decoration:underline}
 tr.row-error td{background:var(--red-light)}tr.row-error td:first-child{box-shadow:inset 3px 0 0 var(--red)}
@@ -201,9 +202,9 @@ tr.row-ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
       <div class="page-title">📥 导入马帮出库表 <small>Import Mabang export</small></div>
       <div class="upload-zone" id="impDrop">
         <input type="file" id="impFile" accept=".xls,.xlsx,.csv">
-        <h2>点击或拖拽上传马帮导出表</h2>
-        <p>Click or drop the Mabang export (.xls / .xlsx / .csv)</p>
-        <p class="muted" style="margin-top:6px;">需要的列：平台交易号、发货时间、发货员、库存SKU、数量、单位重量、订单重量（快递单号可选）</p>
+        <h2>点击或拖拽上传马帮导出表 Click or drop the Mabang export</h2>
+        <p>.xls / .xlsx / .csv</p>
+        <p class="muted" style="margin-top:6px;">需要的列 Required columns：平台交易号、发货时间、发货员、库存SKU、数量、单位重量、订单重量（快递单号可选 tracking no. optional）</p>
       </div>
       <div id="impArea" style="margin-top:16px;"></div>
     </div>
@@ -223,7 +224,7 @@ tr.row-ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
         </div>
         <span id="ovCustom" class="row-flex hidden">
           <input type="date" class="input" id="ovFrom"> — <input type="date" class="input" id="ovTo">
-          <button class="btn btn-primary btn-sm" id="ovGo">查询</button>
+          <button class="btn btn-primary btn-sm" id="ovGo">查询 Load</button>
         </span>
       </div>
       <div class="filter-bar">
@@ -236,7 +237,7 @@ tr.row-ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
       </div>
       <div class="stat-row" id="ovStats"></div>
       <div class="card">
-        <div class="card-title">发货员产量 Packer output <span class="muted" style="font-weight:400">按日均排序 · <span style="color:var(--red)">红色 = 日均低于平均</span> · 点数字看SKU明细</span></div>
+        <div class="card-title">发货员产量 Packer output <span class="muted" style="font-weight:400">按日均排序 Sorted by daily avg · <span style="color:var(--red)">红色 = 日均低于平均 Red = below average</span> · 点数字看SKU明细 Click a number for SKU details</span></div>
         <div class="tbl-wrap" id="ovTable"></div>
       </div>
     </div>
@@ -245,33 +246,33 @@ tr.row-ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
     <div class="page" id="pageWeight">
       <div class="page-title">⚖️ 称重校验 <small>Weight check</small></div>
       <div class="filter-bar">
-        <label>日期</label>
+        <label>日期 Date</label>
         <input type="date" class="input" id="wFrom"> — <input type="date" class="input" id="wTo">
-        <label>发货员</label>
+        <label>发货员 Packer</label>
         <select class="select" id="wEmp"><option value="">全部 All</option></select>
-        <label>阈值</label>
+        <label>阈值 Tolerance</label>
         ±<input type="number" class="input" id="wPct" style="width:60px"> %
-        且 &gt; <input type="number" class="input" id="wG" style="width:70px"> g
+        且 and &gt; <input type="number" class="input" id="wG" style="width:70px"> g
         <button class="btn btn-primary btn-sm" id="wGo">查询 Load</button>
-        <button class="btn btn-ghost btn-sm admin-only" id="wSaveTol">设为默认</button>
+        <button class="btn btn-ghost btn-sm admin-only" id="wSaveTol">设为默认 Set default</button>
       </div>
       <div class="stat-row" id="wStats"></div>
       <div class="card">
         <div class="card-title">
           订单明细 Orders <span class="sp"></span>
-          <input class="input" id="wSku" placeholder="按SKU/单号筛选..." style="width:180px">
+          <input class="input" id="wSku" placeholder="按SKU/单号筛选 Filter..." style="width:180px">
           <span class="muted" id="wCount"></span>
-          <button class="btn btn-ghost btn-sm" id="wCopyFiltered">复制当前列表单号</button>
-          <button class="btn btn-danger btn-sm" id="wCopyErr">复制全部异常单号</button>
+          <button class="btn btn-ghost btn-sm" id="wCopyFiltered">复制当前列表单号 Copy listed IDs</button>
+          <button class="btn btn-danger btn-sm" id="wCopyErr">复制全部异常单号 Copy anomaly IDs</button>
         </div>
         <div class="tbl-wrap scroll" id="wTable"></div>
       </div>
       <div class="two-col">
         <div class="card"><div class="card-title">发货员异常率 By packer</div><div class="tbl-wrap" id="wByEmp"></div></div>
-        <div class="card"><div class="card-title">单重缺失的 SKU（马帮单重 ≤1g，请去马帮补）</div><div class="tbl-wrap" id="wMissing"></div></div>
+        <div class="card"><div class="card-title">单重缺失的 SKU（马帮单重 ≤1g，请去马帮补）SKUs missing unit weight</div><div class="tbl-wrap" id="wMissing"></div></div>
       </div>
       <div class="card">
-        <div class="card-title">单重校准建议 <span class="muted" style="font-weight:400">近30天、只看单SKU订单、至少3单；"实称/件"含包材。差距大的请核对马帮单重</span></div>
+        <div class="card-title">单重校准建议 Unit weight check <span class="muted" style="font-weight:400">近30天、只看单SKU订单、至少3单；"实称/件"含包材 Last 30 days, single-SKU orders, ≥3 orders; actual/pc includes packaging. 差距大的请核对马帮单重</span></div>
         <div class="tbl-wrap" id="wCalib"></div>
       </div>
     </div>
@@ -280,11 +281,11 @@ tr.row-ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
     <div class="page" id="pagePerson">
       <div class="page-title">👤 个人面板 <small>Personal dashboard</small></div>
       <div class="filter-bar">
-        <label>发货员</label><select class="select" id="pEmp" style="min-width:160px"></select>
-        <label>月份</label><input type="month" class="input" id="pMonth">
+        <label>发货员 Packer</label><select class="select" id="pEmp" style="min-width:160px"></select>
+        <label>月份 Month</label><input type="month" class="input" id="pMonth">
       </div>
       <div class="stat-row" id="pStats"></div>
-      <div class="card"><div class="card-title">每日明细 Daily <span class="muted" style="font-weight:400">点数字看SKU明细</span></div><div class="tbl-wrap" id="pTable"></div></div>
+      <div class="card"><div class="card-title">每日明细 Daily <span class="muted" style="font-weight:400">点数字看SKU明细 Click a number for SKU details</span></div><div class="tbl-wrap" id="pTable"></div></div>
     </div>
 
     <!-- ===== ADMIN ===== -->
@@ -301,39 +302,39 @@ tr.row-ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
           <div class="card-title">新建账号 New account</div>
           <div class="row-flex">
             <input class="input" id="naUser" placeholder="用户名 username" autocapitalize="off" style="width:150px">
-            <input class="input" id="naPwd" placeholder="密码 ≥6位" style="width:140px">
+            <input class="input" id="naPwd" placeholder="密码 Password ≥6" style="width:140px">
             <select class="select" id="naRole"><option value="staff">员工 Staff</option><option value="admin">管理员 Admin</option></select>
             <button class="btn btn-primary btn-sm" id="naGo">新建 Create</button>
           </div>
         </div>
-        <div class="card"><div class="card-title">账号列表</div><div class="tbl-wrap" id="accList"></div></div>
+        <div class="card"><div class="card-title">账号列表 Accounts</div><div class="tbl-wrap" id="accList"></div></div>
       </div>
       <div id="adEmp" class="hidden">
         <div class="card">
           <div class="card-title">新增发货员 Add packer</div>
-          <div class="row-flex"><input class="input" id="neName" placeholder="姓名 Name" style="width:160px"><button class="btn btn-primary btn-sm" id="neGo">添加</button></div>
+          <div class="row-flex"><input class="input" id="neName" placeholder="姓名 Name" style="width:160px"><button class="btn btn-primary btn-sm" id="neGo">添加 Add</button></div>
         </div>
         <div class="card">
-          <div class="card-title">发货员与马帮别名 <span class="muted" style="font-weight:400">马帮里的发货员名字（不分大小写）对应到哪个人。改指向会同时更新已导入的订单</span></div>
+          <div class="card-title">发货员与马帮别名 Packers &amp; Mabang names <span class="muted" style="font-weight:400">马帮里的发货员名字（不分大小写）对应到哪个人。改指向会同时更新已导入的订单 Which person each Mabang packer name belongs to; changing it also updates imported orders</span></div>
           <div class="tbl-wrap" id="empList"></div>
         </div>
       </div>
       <div id="adSku" class="hidden">
-        <div class="notice info">默认规则：SKU 以 <b>FS-</b> 或 <b>HL-</b> 开头 <b>且</b> 单重 ≥ 2000g 算哑铃，其余算其他。手动设置的优先，并会同时更新已导入订单。</div>
+        <div class="notice info">默认规则：SKU 以 <b>FS-</b> 或 <b>HL-</b> 开头 <b>且</b> 单重 ≥ 2000g 算哑铃，其余算其他。手动设置的优先，并会同时更新已导入订单。<br>Rule: SKU starts with FS- or HL- AND unit weight ≥ 2000g = Dumbbell, everything else = Other. Manual settings win and also update imported orders.</div>
         <div class="card">
-          <div class="card-title">近90天出现过的 SKU <span class="sp"></span><input class="input" id="skuSearch" placeholder="搜索 SKU..." style="width:180px"></div>
+          <div class="card-title">近90天出现过的 SKU SKUs in last 90 days <span class="sp"></span><input class="input" id="skuSearch" placeholder="搜索 Search SKU..." style="width:180px"></div>
           <div class="tbl-wrap scroll" id="skuList"></div>
         </div>
       </div>
       <div id="adSet" class="hidden">
         <div class="card">
           <div class="card-title">切换日 Cutover date</div>
-          <p class="muted" style="margin-bottom:10px">这一天之前的产量读旧系统（手工录入），从这一天起读导入的马帮数据。一般不用改。</p>
-          <div class="row-flex"><input type="date" class="input" id="setCut"><button class="btn btn-primary btn-sm" id="setCutGo">保存</button></div>
+          <p class="muted" style="margin-bottom:10px">这一天之前的产量读旧系统（手工录入），从这一天起读导入的马帮数据。一般不用改。<br>Before this date: old manual records. From this date: imported Mabang data. Usually no need to change.</p>
+          <div class="row-flex"><input type="date" class="input" id="setCut"><button class="btn btn-primary btn-sm" id="setCutGo">保存 Save</button></div>
         </div>
         <div class="card">
-          <div class="card-title">称重默认阈值</div>
-          <div class="row-flex">±<input type="number" class="input" id="setPct" style="width:70px"> % 且差值 &gt; <input type="number" class="input" id="setG" style="width:80px"> g <button class="btn btn-primary btn-sm" id="setTolGo">保存</button></div>
+          <div class="card-title">称重默认阈值 Default weight tolerance</div>
+          <div class="row-flex">±<input type="number" class="input" id="setPct" style="width:70px"> % 且差值 and diff &gt; <input type="number" class="input" id="setG" style="width:80px"> g <button class="btn btn-primary btn-sm" id="setTolGo">保存 Save</button></div>
         </div>
       </div>
     </div>
@@ -343,18 +344,18 @@ tr.row-ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
       <div class="page-title">🏷️ 面单重量修改 <small>Label Weight Editor</small></div>
       <div id="weUploadArea" class="we-upload" onclick="document.getElementById('weFileInput').click()">
         <h2>📄 上传面单PDF Upload Label PDF</h2>
-        <p class="muted">拖拽PDF到这里，或点击选择</p>
+        <p class="muted">拖拽PDF到这里，或点击选择 Drop PDF here or click</p>
         <input type="file" id="weFileInput" accept=".pdf" style="display:none;" onchange="weHandleFile(event)">
       </div>
       <div id="weWorkArea" class="hidden">
         <div class="we-header">
           <span id="weStats" class="muted"></span><div style="flex:1"></div>
-          <label class="muted">默认重量:</label>
+          <label class="muted">默认重量 Weight:</label>
           <input type="text" id="weDefaultWeight" class="input" style="width:80px;text-align:center;" placeholder="5.000" onkeydown="if(event.key==='Enter')weApplyAll()">
-          <button class="btn btn-primary btn-sm" onclick="weApplyAll()">批量应用</button>
-          <button class="btn btn-ghost btn-sm" onclick="weReset()">重置</button>
-          <button class="btn btn-success btn-sm" onclick="wePrint()">🖨️ 打印</button>
-          <button class="btn btn-ghost btn-sm" onclick="weReupload()">重新上传</button>
+          <button class="btn btn-primary btn-sm" onclick="weApplyAll()">批量应用 Apply all</button>
+          <button class="btn btn-ghost btn-sm" onclick="weReset()">重置 Reset</button>
+          <button class="btn btn-success btn-sm" onclick="wePrint()">🖨️ 打印 Print</button>
+          <button class="btn btn-ghost btn-sm" onclick="weReupload()">重新上传 Re-upload</button>
         </div>
         <div class="we-grid" id="weGrid"></div>
       </div>
@@ -443,10 +444,10 @@ const CORE = (() => {
       const raw = rowsRaw[i] || {};
       const no = String(r[cols.order] ?? '').trim();
       if (!no) return; // blank line
-      if (/e\+/i.test(no)) { errors.push({ row: i + 2, no, msg: '平台交易号被Excel转成了科学计数法，无法识别' }); return; }
+      if (/e\+/i.test(no)) { errors.push({ row: i + 2, no, msg: '平台交易号被Excel转成了科学计数法，无法识别 Order ID was turned into scientific notation by Excel' }); return; }
       const sku = String(r[cols.sku] ?? '').trim();
       const qty = num(r[cols.qty]);
-      if (!sku || qty <= 0) { errors.push({ row: i + 2, no, msg: 'SKU为空或数量≤0，已跳过该行' }); return; }
+      if (!sku || qty <= 0) { errors.push({ row: i + 2, no, msg: 'SKU为空或数量≤0，已跳过该行 Empty SKU or qty ≤ 0, row skipped' }); return; }
       let o = byNo.get(no);
       if (!o) {
         const t = parseShipTime(r[cols.time], raw[cols.time]);
@@ -464,7 +465,7 @@ const CORE = (() => {
     });
     const orders = [];
     for (const o of byNo.values()) {
-      if (!o.ship_time) { errors.push({ row: '-', no: o.order_no, msg: '发货时间为空或格式不对，整单跳过' }); continue; }
+      if (!o.ship_time) { errors.push({ row: '-', no: o.order_no, msg: '发货时间为空或格式不对，整单跳过 Missing/invalid ship time, order skipped' }); continue; }
       orders.push(o);
     }
     return { orders, errors, missingCols: [], rowCount: rowsText.length };
@@ -572,9 +573,10 @@ function checkRange(from, to) {
 async function doLogin() {
   const u = $('loginUser').value.trim().toLowerCase(), p = $('loginPwd').value;
   $('loginError').textContent = '';
-  if (!u || !p) { $('loginError').textContent = '请输入用户名和密码'; return; }
+  if (!u || !p) { $('loginError').textContent = '请输入用户名和密码 Enter username and password'; return; }
   $('btnLogin').disabled = true;
-  const { error } = await sbc.auth.signInWithPassword({ email: `${u}@${EMAIL_DOMAIN}`, password: p });
+  const email = u.includes('@') ? u : `${u}@${EMAIL_DOMAIN}`;   // 填 ken 或 ken@nrwh.local 都可以
+  const { error } = await sbc.auth.signInWithPassword({ email, password: p });
   $('btnLogin').disabled = false;
   if (error) { $('loginError').textContent = '用户名或密码错误 Wrong username or password'; return; }
   $('loginPwd').value = '';
@@ -601,14 +603,14 @@ function showLogin(msg) {
 async function doLogout() { await sbc.auth.signOut(); me = null; showLogin(); }
 function changeOwnPassword() {
   modal(`<h2>修改我的密码 Change password</h2>
-    <div class="field"><label>新密码（至少6位）</label><input type="password" id="cpw1"></div>
-    <div class="field"><label>再输一次</label><input type="password" id="cpw2"></div>`, async ov => {
+    <div class="field"><label>新密码（至少6位）New password (min 6)</label><input type="password" id="cpw1"></div>
+    <div class="field"><label>再输一次 Repeat</label><input type="password" id="cpw2"></div>`, async ov => {
     const a = ov.querySelector('#cpw1').value, b = ov.querySelector('#cpw2').value;
-    if (a.length < 6) { toast('至少6位'); return false; }
-    if (a !== b) { toast('两次不一致'); return false; }
+    if (a.length < 6) { toast('至少6位 Min 6 characters'); return false; }
+    if (a !== b) { toast('两次不一致 Passwords do not match'); return false; }
     const { error } = await sbc.auth.updateUser({ password: a });
     if (error) throw new Error(error.message);
-    toast('✅ 密码已修改');
+    toast('✅ 密码已修改 Password changed');
   });
 }
 
@@ -677,7 +679,7 @@ function readSheet(file) {
         });
       } catch (err) { reject(err); }
     };
-    r.onerror = () => reject(new Error('读取文件失败'));
+    r.onerror = () => reject(new Error('读取文件失败 Cannot read file'));
     r.readAsArrayBuffer(file);
   });
 }
@@ -723,10 +725,10 @@ function renderImport() {
   if (!imp) { el.innerHTML = ''; return; }
   const P = imp.parsed;
   if (P.missingCols.length) {
-    el.innerHTML = `<div class="notice err">❌ 表格缺少这些列：<b>${P.missingCols.map(esc).join('、')}</b>。请在马帮导出模板里加上后重新导出。</div>`;
+    el.innerHTML = `<div class="notice err">❌ 表格缺少这些列 Missing columns：<b>${P.missingCols.map(esc).join('、')}</b>。请在马帮导出模板里加上后重新导出 Add them to the Mabang export template and export again.</div>`;
     return;
   }
-  if (!P.orders.length) { el.innerHTML = `<div class="notice err">❌ 没有读到任何订单</div>`; return; }
+  if (!P.orders.length) { el.innerHTML = `<div class="notice err">❌ 没有读到任何订单 No orders found</div>`; return; }
   if (imp.saved) { renderImportResult(); return; }
 
   const dates = P.orders.map(o => o.ship_time.slice(0, 10)).sort();
@@ -738,7 +740,7 @@ function renderImport() {
   P.orders.forEach(o => {
     const id = resolvePacker(o.packer_raw);
     const k = id ? 'id:' + id : 'raw:' + o.packer_raw.trim().toLowerCase();
-    const name = id ? empName(id) : (o.packer_raw.trim() || '(空)') + ' 🆕';
+    const name = id ? empName(id) : (o.packer_raw.trim() || '(空 blank)') + ' 🆕';
     per[k] = per[k] || { name, orders: 0, db: 0, ot: 0 };
     per[k].orders++;
     o.items.forEach(it => { if (CORE.isDumbbell(it.sku, it.unit_weight, skuOverrides)) per[k].db += it.qty; else per[k].ot += it.qty; });
@@ -746,32 +748,32 @@ function renderImport() {
 
   const empOpts = employees.filter(e => e.active).map(e => `<option value="${e.id}">${esc(e.name)}</option>`).join('');
   let html = `<div class="stat-row">
-    <div class="stat-box"><div class="stat-label">文件</div><div class="stat-sub" style="font-weight:600;color:var(--text);word-break:break-all">${esc(imp.fileName)}</div></div>
-    <div class="stat-box"><div class="stat-label">订单数 Orders</div><div class="stat-value">${P.orders.length}</div><div class="stat-sub">${items} 行明细</div></div>
+    <div class="stat-box"><div class="stat-label">文件 File</div><div class="stat-sub" style="font-weight:600;color:var(--text);word-break:break-all">${esc(imp.fileName)}</div></div>
+    <div class="stat-box"><div class="stat-label">订单数 Orders</div><div class="stat-value">${P.orders.length}</div><div class="stat-sub">${items} 行明细 lines</div></div>
     <div class="stat-box"><div class="stat-label">发货日期 Dates</div><div class="stat-sub" style="font-size:14px;font-weight:600;color:var(--text)">${dates[0]}${dates[0] !== dates[dates.length - 1] ? ' ~ ' + dates[dates.length - 1] : ''}</div></div>
-    <div class="stat-box ${imp.existing.size ? 'c-orange' : ''}"><div class="stat-label">已导入过（将覆盖）</div><div class="stat-value">${imp.existing.size}</div><div class="stat-sub">不会重复计数</div></div>
-    <div class="stat-box ${missingCnt ? 'c-purple' : ''}"><div class="stat-label">含单重缺失SKU</div><div class="stat-value">${missingCnt}</div></div>
+    <div class="stat-box ${imp.existing.size ? 'c-orange' : ''}"><div class="stat-label">已导入过（将覆盖）Already imported (overwrite)</div><div class="stat-value">${imp.existing.size}</div><div class="stat-sub">不会重复计数 Not double-counted</div></div>
+    <div class="stat-box ${missingCnt ? 'c-purple' : ''}"><div class="stat-label">含单重缺失SKU Missing unit weight</div><div class="stat-value">${missingCnt}</div></div>
   </div>`;
   if (P.errors.length) {
-    html += `<div class="notice warn">⚠ ${P.errors.length} 处问题已跳过：<details style="display:inline"><summary style="display:inline;cursor:pointer">查看</summary>
-      <div style="margin-top:6px">${P.errors.slice(0, 50).map(e => `第${e.row}行 ${esc(e.no)}：${esc(e.msg)}`).join('<br>')}</div></details></div>`;
+    html += `<div class="notice warn">⚠ ${P.errors.length} 处问题已跳过 issues skipped：<details style="display:inline"><summary style="display:inline;cursor:pointer">查看 View</summary>
+      <div style="margin-top:6px">${P.errors.slice(0, 50).map(e => `第${e.row}行 Row ${e.row} · ${esc(e.no)}：${esc(e.msg)}`).join('<br>')}</div></details></div>`;
   }
   if (imp.unresolved.length) {
-    html += `<div class="card"><div class="card-title">🆕 没认出的发货员 — 请选择对应的人（选一次，以后自动认）</div>
-      <table class="tbl"><thead><tr><th>马帮里的名字</th><th class="num">单数</th><th>对应 Map to</th></tr></thead><tbody>
+    html += `<div class="card"><div class="card-title">🆕 没认出的发货员 Unknown packers — 请选择对应的人（选一次，以后自动认）Pick who each one is (remembered next time)</div>
+      <table class="tbl"><thead><tr><th>马帮里的名字 Mabang name</th><th class="num">单数 Orders</th><th>对应 Map to</th></tr></thead><tbody>
       ${imp.unresolved.map(u => `<tr><td><b>${esc(u.raw)}</b></td><td class="num">${u.count}</td><td>
         <select class="select imp-map" data-key="${esc(u.key)}">
-          <option value="__new__">➕ 新建员工「${esc((u.raw === '(空 blank)' ? 'UNKNOWN' : u.raw).toUpperCase())}」</option>${empOpts}
+          <option value="__new__">➕ 新建员工 New「${esc((u.raw === '(空 blank)' ? 'UNKNOWN' : u.raw).toUpperCase())}」</option>${empOpts}
         </select></td></tr>`).join('')}
       </tbody></table></div>`;
   }
-  html += `<div class="card"><div class="card-title">预览：本次各发货员产量（按SKU数量）</div>
-    <table class="tbl"><thead><tr><th>发货员</th><th class="num">单数</th><th class="num">🏋️ 哑铃</th><th class="num">📦 其他</th><th class="num">合计</th></tr></thead><tbody>
+  html += `<div class="card"><div class="card-title">预览：本次各发货员产量（按SKU数量）Preview: output by packer (SKU qty)</div>
+    <table class="tbl"><thead><tr><th>发货员 Packer</th><th class="num">单数 Orders</th><th class="num">🏋️ 哑铃 Dumbbell</th><th class="num">📦 其他 Other</th><th class="num">合计 Total</th></tr></thead><tbody>
     ${Object.values(per).sort((a, b) => (b.db + b.ot) - (a.db + a.ot)).map(p => `<tr><td>${esc(p.name)}</td><td class="num">${p.orders}</td><td class="num">${p.db}</td><td class="num">${p.ot}</td><td class="num">${p.db + p.ot}</td></tr>`).join('')}
     </tbody></table>
     <div class="row-flex" style="margin-top:14px;justify-content:flex-end">
-      <button class="btn btn-ghost" id="impCancel">取消</button>
-      <button class="btn btn-primary" id="impSave">✅ 确认保存 Save ${P.orders.length} 单</button>
+      <button class="btn btn-ghost" id="impCancel">取消 Cancel</button>
+      <button class="btn btn-primary" id="impSave">✅ 确认保存 Save ${P.orders.length} 单 orders</button>
     </div></div>`;
   el.innerHTML = html;
   el.querySelectorAll('.imp-map').forEach(s => {
@@ -822,7 +824,7 @@ async function saveImport() {
     imp.saved = { total: done, overwritten: imp.existing.size, from: dates[0], to: dates[dates.length - 1] };
     fillEmpSelects();
   } catch (e) {
-    toast('❌ 保存失败 ' + e.message, 6000);
+    toast('❌ 保存失败 Save failed: ' + e.message, 6000);
   }
   loaded();
   renderImport();
@@ -830,8 +832,8 @@ async function saveImport() {
 
 function renderImportResult() {
   const s = imp.saved;
-  $('impArea').innerHTML = `<div class="notice ok">✅ 已保存 ${s.total} 单（新增 ${s.total - s.overwritten}，覆盖 ${s.overwritten}），发货日期 ${s.from}${s.from !== s.to ? ' ~ ' + s.to : ''}</div>
-    <div class="row-flex"><button class="btn btn-primary" id="goW">⚖️ 查看这批的称重校验</button><button class="btn btn-ghost" id="goO">📊 查看产量</button><button class="btn btn-ghost" id="goN">继续导入</button></div>`;
+  $('impArea').innerHTML = `<div class="notice ok">✅ 已保存 Saved ${s.total} 单 orders（新增 new ${s.total - s.overwritten}，覆盖 overwritten ${s.overwritten}），发货日期 Dates ${s.from}${s.from !== s.to ? ' ~ ' + s.to : ''}</div>
+    <div class="row-flex"><button class="btn btn-primary" id="goW">⚖️ 查看这批的称重校验 Weight check</button><button class="btn btn-ghost" id="goO">📊 查看产量 Output</button><button class="btn btn-ghost" id="goN">继续导入 Import more</button></div>`;
   $('goW').onclick = () => { $('wFrom').value = s.from; $('wTo').value = s.to; $('wEmp').value = ''; switchPage('pageWeight'); };
   $('goO').onclick = () => {
     setSeg('ovPeriod', 'custom'); $('ovFrom').value = s.from; $('ovTo').value = s.to; $('ovCustom').classList.remove('hidden');
@@ -846,13 +848,13 @@ function setSeg(id, v) { $(id).querySelectorAll('button').forEach(b => b.classLi
 // =============================================
 let ovRange = null, ovData = null;
 const catVal = (r, cat) => cat === 'dumbbell' ? +r.db : cat === 'other' ? +r.ot : (+r.db + +r.ot);
-const CAT_LABEL = { dumbbell: '哑铃', other: '其他', all: '全部' };
+const CAT_LABEL = { dumbbell: '哑铃 Dumbbell', other: '其他 Other', all: '全部 All' };
 
 async function refreshOverview() {
   const p = segValue('ovPeriod');
   if (p === 'custom') {
     const f = $('ovFrom').value, t = $('ovTo').value;
-    if (!f || !t) { $('ovTable').innerHTML = '<p class="empty">选择日期后点查询</p>'; return; }
+    if (!f || !t) { $('ovTable').innerHTML = '<p class="empty">选择日期后点查询 Pick dates and click Load</p>'; return; }
     if (!checkRange(f, t)) return;
     ovRange = [f, t];
   } else ovRange = CORE.periodRange(p, today());
@@ -877,7 +879,7 @@ function renderOverview() {
   const cat = segValue('ovCat');
   const [from, to] = ovRange;
   const cut = settings.cutover_date;
-  $('ovRange').textContent = `${from}${from !== to ? ' ~ ' + to : ''}` + (cut && from < cut ? `　· ${cut} 之前为旧系统手工录入数据（旧数据只有哑铃）` : '');
+  $('ovRange').textContent = `${from}${from !== to ? ' ~ ' + to : ''}` + (cut && from < cut ? `　· ${cut} 之前为旧系统手工录入数据（旧数据只有哑铃）Before ${cut}: old manual records (dumbbell only)` : '');
   const list = aggregate(ovData, cat).sort((a, b) => b.avg - a.avg);
   const total = list.reduce((s, b) => s + b.total, 0);
   const personDays = list.reduce((s, b) => s + b.nd, 0);
@@ -891,7 +893,7 @@ function renderOverview() {
   if (!list.length) { $('ovTable').innerHTML = '<p class="empty">这段时间没有数据 No data</p>'; return; }
   const showDates = from !== to && CORE.daysBetween(from, to) <= MAX_RANGE_DAYS;
   const dates = showDates ? CORE.dateList(from, to).filter(d => list.some(b => b.byDate[d])) : [];
-  let h = `<table class="tbl"><thead><tr><th>发货员</th>${dates.map(d => `<th class="num">${d.slice(5)}</th>`).join('')}<th class="num">合计</th><th class="num">天数</th><th class="num">日均</th></tr></thead><tbody>`;
+  let h = `<table class="tbl"><thead><tr><th>发货员 Packer</th>${dates.map(d => `<th class="num">${d.slice(5)}</th>`).join('')}<th class="num">合计 Total</th><th class="num">天数 Days</th><th class="num">日均 Avg/day</th></tr></thead><tbody>`;
   list.forEach(b => {
     const low = b.avg < groupAvg;
     h += `<tr><td><span class="clickable" data-person="${b.id}"><b>${esc(empName(b.id))}</b></span></td>`;
@@ -907,7 +909,7 @@ async function showSkuDetail(ev, empId, from, to, cat) {
     const rows = await rpc('wh_output_detail', { p_emp: empId, p_from: from, p_to: to, p_cat: cat });
     const total = rows.reduce((s, r) => s + Number(r[1]), 0);
     openPopup(ev, `<div class="dp-header">${esc(empName(empId))} · ${from}${from !== to ? ' ~ ' + to : ''} · ${CAT_LABEL[cat]}</div>
-      ${rows.map(r => `<div class="dp-row"><span>${esc(r[0])}</span><span>${fmt(r[1])}</span></div>`).join('') || '<p class="muted">无</p>'}
+      ${rows.map(r => `<div class="dp-row"><span>${esc(r[0])}</span><span>${fmt(r[1])}</span></div>`).join('') || '<p class="muted">无 None</p>'}
       <div class="dp-total"><span>合计 Total</span><span>${fmt(total)}</span></div>`);
   } catch (e) { toast('❌ ' + e.message); }
 }
@@ -920,8 +922,8 @@ const ST_ORDER = { error: 0, noscale: 1, missing: 2, ok: 3 };
 
 async function refreshWeight() {
   const f = $('wFrom').value, t = $('wTo').value;
-  if (!f || !t || f > t) { toast('日期范围不对'); return; }
-  if (CORE.daysBetween(f, t) > MAX_RANGE_DAYS) { toast(`称重校验最多查 ${MAX_RANGE_DAYS} 天`); return; }
+  if (!f || !t || f > t) { toast('日期范围不对 Invalid range'); return; }
+  if (CORE.daysBetween(f, t) > MAX_RANGE_DAYS) { toast(`称重校验最多查 ${MAX_RANGE_DAYS} 天 Max ${MAX_RANGE_DAYS} days`); return; }
   loading('加载 Loading...');
   try {
     const [orders, calib] = await Promise.all([
@@ -952,45 +954,45 @@ function renderWeight() {
   $('wStats').innerHTML = box('all', '全部 Total', all.length, '') + box('error', '重量异常 Anomaly', c('error'), 'c-red') +
     box('noscale', '秤未捕获 No scale', c('noscale'), 'c-orange') + box('missing', '单重缺失 No unit wt', c('missing'), 'c-purple') + box('ok', '正常 OK', c('ok'), 'c-green');
   const list = filteredWeight(all);
-  $('wCount').textContent = `${list.length} 单`;
+  $('wCount').textContent = `${list.length} 单 orders`;
   if (!list.length) { $('wTable').innerHTML = '<p class="empty">没有订单 No orders</p>'; }
   else {
-    $('wTable').innerHTML = `<table class="tbl"><thead><tr><th>发货时间</th><th>平台交易号</th><th>快递单号</th><th>发货员</th><th>SKU × 数量</th><th class="num">件数</th><th class="num">理论(g)</th><th class="num">实称(g)</th><th class="num">偏差</th><th>状态</th></tr></thead><tbody>
+    $('wTable').innerHTML = `<table class="tbl"><thead><tr><th>发货时间<br><span class="en">Time</span></th><th>平台交易号<br><span class="en">Order ID</span></th><th>快递单号<br><span class="en">Tracking</span></th><th>发货员<br><span class="en">Packer</span></th><th>SKU × 数量<br><span class="en">SKU × Qty</span></th><th class="num">件数<br><span class="en">Pcs</span></th><th class="num">理论(g)<br><span class="en">Expected</span></th><th class="num">实称(g)<br><span class="en">Actual</span></th><th class="num">偏差<br><span class="en">Diff</span></th><th>状态<br><span class="en">Status</span></th></tr></thead><tbody>
     ${list.slice(0, 2000).map(o => {
       const cls = { error: 'row-error', noscale: 'row-warn', missing: 'row-miss', ok: 'row-ok' }[o.st];
-      const badge = { error: `<span class="badge badge-red">异常</span> <small class="muted">${o.diff > 0 ? '超重' : '偏轻'}</small>`, noscale: '<span class="badge badge-orange">秤未捕获</span>', missing: '<span class="badge badge-purple">单重缺失</span>', ok: '<span class="badge badge-ok">正常</span>' }[o.st];
-      const dev = o.dp == null ? '—' : `${o.diff > 0 ? '+' : ''}${fmt(o.diff)}g / ${o.dp > 0 ? '+' : ''}${o.dp.toFixed(1)}%`;
+      const badge = { error: `<span class="badge badge-red">异常 Anomaly</span><br><small class="muted">${o.diff > 0 ? '超重 Over' : '偏轻 Under'}</small>`, noscale: '<span class="badge badge-orange">秤未捕获 No scale</span>', missing: '<span class="badge badge-purple">单重缺失 No unit wt</span>', ok: '<span class="badge badge-ok">正常 OK</span>' }[o.st];
+      const dev = o.dp == null ? '—' : `${o.diff > 0 ? '+' : ''}${fmt(o.diff)}g<br><small>${o.dp > 0 ? '+' : ''}${o.dp.toFixed(1)}%</small>`;
       return `<tr class="${cls}"><td class="muted">${esc(String(o.t || '').slice(5, 16).replace('T', ' '))}</td>
-        <td class="mono">${esc(o.no)} <button class="cp" data-cp="${esc(o.no)}" title="复制">⧉</button></td>
+        <td class="mono">${esc(o.no)} <button class="cp" data-cp="${esc(o.no)}" title="复制 Copy">⧉</button></td>
         <td class="mono">${esc(o.tr || '')}</td><td>${esc(o.e ? empName(o.e) : o.pr)}</td>
-        <td class="wrap">${o.it.map(i => `${esc(i[0])} ×${i[1]}${i[2] <= 1 ? ' <span style="color:var(--purple)">(单重' + i[2] + ')</span>' : ''}`).join('<br>')}</td>
+        <td class="wrap">${o.it.map(i => `${esc(i[0])} ×${i[1]}${i[2] <= 1 ? ' <span style="color:var(--purple)">(单重 unit ' + i[2] + 'g)</span>' : ''}`).join('<br>')}</td>
         <td class="num">${o.q}</td><td class="num">${fmt(o.tw)}</td><td class="num">${fmt(o.aw)}</td>
         <td class="num ${o.st === 'error' ? 'dev-pos' : 'dev-ok'}">${dev}</td><td>${badge}</td></tr>`;
-    }).join('')}</tbody></table>${list.length > 2000 ? '<p class="muted" style="padding:8px">只显示前 2000 单，请缩小范围</p>' : ''}`;
+    }).join('')}</tbody></table>${list.length > 2000 ? '<p class="muted" style="padding:8px">只显示前 2000 单，请缩小范围 Showing first 2000, narrow the range</p>' : ''}`;
   }
   // by packer
   const by = {};
   all.forEach(o => { const k = o.e || 'raw:' + o.pr; const b = by[k] = by[k] || { name: o.e ? empName(o.e) : o.pr, n: 0, err: 0, checked: 0 }; b.n++; if (o.st === 'error' || o.st === 'ok') b.checked++; if (o.st === 'error') b.err++; });
   const bl = Object.values(by).sort((a, b) => b.err - a.err || b.n - a.n);
-  $('wByEmp').innerHTML = bl.length ? `<table class="tbl"><thead><tr><th>发货员</th><th class="num">单数</th><th class="num">可校验</th><th class="num">异常</th><th class="num">异常率</th></tr></thead><tbody>
+  $('wByEmp').innerHTML = bl.length ? `<table class="tbl"><thead><tr><th>发货员 Packer</th><th class="num">单数 Orders</th><th class="num">可校验 Checked</th><th class="num">异常 Anomaly</th><th class="num">异常率 Rate</th></tr></thead><tbody>
     ${bl.map(b => `<tr><td>${esc(b.name)}</td><td class="num">${b.n}</td><td class="num">${b.checked}</td><td class="num ${b.err ? 'below-avg' : ''}">${b.err}</td><td class="num">${b.checked ? (b.err / b.checked * 100).toFixed(1) + '%' : '—'}</td></tr>`).join('')}</tbody></table>` : '<p class="empty">—</p>';
   // missing unit weight SKUs
   const miss = {};
   all.forEach(o => o.it.forEach(i => { if (i[2] <= 1) { const k = String(i[0]).toUpperCase(); miss[k] = miss[k] || { sku: i[0], orders: 0 }; miss[k].orders++; } }));
   const ml = Object.values(miss).sort((a, b) => b.orders - a.orders);
-  $('wMissing').innerHTML = ml.length ? `<table class="tbl"><thead><tr><th>SKU</th><th class="num">涉及单数</th></tr></thead><tbody>${ml.map(m => `<tr><td class="mono">${esc(m.sku)}</td><td class="num">${m.orders}</td></tr>`).join('')}</tbody></table>` : '<p class="empty">✅ 没有</p>';
+  $('wMissing').innerHTML = ml.length ? `<table class="tbl"><thead><tr><th>SKU</th><th class="num">涉及单数 Orders</th></tr></thead><tbody>${ml.map(m => `<tr><td class="mono">${esc(m.sku)}</td><td class="num">${m.orders}</td></tr>`).join('')}</tbody></table>` : '<p class="empty">✅ 没有 None</p>';
 }
 
 function renderCalib(rows) {
-  $('wCalib').innerHTML = rows.length ? `<table class="tbl"><thead><tr><th>SKU</th><th class="num">马帮单重(g)</th><th class="num">实称/件 中位数(g)</th><th class="num">差</th><th class="num">样本单数</th></tr></thead><tbody>
-    ${rows.map(r => `<tr><td class="mono">${esc(r.sku)}</td><td class="num">${fmt(r.cur)}</td><td class="num">${fmt(r.med)}</td><td class="num below-avg">${r.med - r.cur > 0 ? '+' : ''}${fmt(r.med - r.cur)}</td><td class="num">${r.n}</td></tr>`).join('')}</tbody></table>` : '<p class="empty">✅ 暂无建议（数据积累几天后才会出现）</p>';
+  $('wCalib').innerHTML = rows.length ? `<table class="tbl"><thead><tr><th>SKU</th><th class="num">马帮单重 Mabang unit(g)</th><th class="num">实称/件 中位数 Actual/pc median(g)</th><th class="num">差 Diff</th><th class="num">样本单数 Samples</th></tr></thead><tbody>
+    ${rows.map(r => `<tr><td class="mono">${esc(r.sku)}</td><td class="num">${fmt(r.cur)}</td><td class="num">${fmt(r.med)}</td><td class="num below-avg">${r.med - r.cur > 0 ? '+' : ''}${fmt(r.med - r.cur)}</td><td class="num">${r.n}</td></tr>`).join('')}</tbody></table>` : '<p class="empty">✅ 暂无建议（数据积累几天后才会出现）No suggestions yet (needs a few days of data)</p>';
 }
 
 function copyWeight(onlyErr) {
   const all = computeWeight();
   const list = onlyErr ? all.filter(o => o.st === 'error') : filteredWeight(all);
-  if (!list.length) { toast('没有可复制的单号'); return; }
-  copyText(list.map(o => o.no).join('\n')).then(() => toast(`已复制 ${list.length} 个单号 Copied`));
+  if (!list.length) { toast('没有可复制的单号 Nothing to copy'); return; }
+  copyText(list.map(o => o.no).join('\n')).then(() => toast(`已复制 ${list.length} 个单号 Copied ${list.length} IDs`));
 }
 
 // =============================================
@@ -998,7 +1000,7 @@ function copyWeight(onlyErr) {
 // =============================================
 async function refreshPerson() {
   const emp = $('pEmp').value, m = $('pMonth').value;
-  if (!emp || !m) { $('pTable').innerHTML = '<p class="empty">选择发货员</p>'; return; }
+  if (!emp || !m) { $('pTable').innerHTML = '<p class="empty">选择发货员 Pick a packer</p>'; return; }
   const t = today();
   const mFrom = m + '-01', mTo = CORE.monthEnd(mFrom);
   const wk = CORE.weekStart(t);
@@ -1019,19 +1021,19 @@ async function refreshPerson() {
     const checked = ws.filter(s => s === 'error' || s === 'ok').length, errs = ws.filter(s => s === 'error').length;
     const mTotal = sum(all, mFrom, mTo);
     $('pStats').innerHTML = `
-      <div class="stat-box"><div class="stat-label">今日 Today</div><div class="stat-value" style="color:var(--blue)">${fmt(sum(all, t, t))}</div><div class="stat-sub">哑铃 ${fmt(sum(db, t, t))} · 其他 ${fmt(sum(ot, t, t))}</div></div>
-      <div class="stat-box"><div class="stat-label">本周 Week (周一起)</div><div class="stat-value">${fmt(sum(all, wk, t))}</div><div class="stat-sub">哑铃 ${fmt(sum(db, wk, t))} · 其他 ${fmt(sum(ot, wk, t))}</div></div>
-      <div class="stat-box"><div class="stat-label">${m} 月合计</div><div class="stat-value">${fmt(mTotal)}</div><div class="stat-sub">哑铃 ${fmt(sum(db, mFrom, mTo))} · 其他 ${fmt(sum(ot, mFrom, mTo))}</div></div>
-      <div class="stat-box"><div class="stat-label">${m} 出勤天数 / 日均</div><div class="stat-value">${mDays}</div><div class="stat-sub">日均 ${mDays ? Math.round(mTotal / mDays) : 0}</div></div>
-      <div class="stat-box ${errs ? 'c-red' : ''}"><div class="stat-label">${m} 称重异常</div><div class="stat-value">${errs}</div><div class="stat-sub">可校验 ${checked} 单 · 异常率 ${checked ? (errs / checked * 100).toFixed(1) + '%' : '—'}</div></div>`;
+      <div class="stat-box"><div class="stat-label">今日 Today</div><div class="stat-value" style="color:var(--blue)">${fmt(sum(all, t, t))}</div><div class="stat-sub">哑铃 Dumbbell ${fmt(sum(db, t, t))} · 其他 Other ${fmt(sum(ot, t, t))}</div></div>
+      <div class="stat-box"><div class="stat-label">本周 Week (Mon–Sun)</div><div class="stat-value">${fmt(sum(all, wk, t))}</div><div class="stat-sub">哑铃 Dumbbell ${fmt(sum(db, wk, t))} · 其他 Other ${fmt(sum(ot, wk, t))}</div></div>
+      <div class="stat-box"><div class="stat-label">${m} 月合计 Month total</div><div class="stat-value">${fmt(mTotal)}</div><div class="stat-sub">哑铃 Dumbbell ${fmt(sum(db, mFrom, mTo))} · 其他 Other ${fmt(sum(ot, mFrom, mTo))}</div></div>
+      <div class="stat-box"><div class="stat-label">${m} 出勤天数 Days worked</div><div class="stat-value">${mDays}</div><div class="stat-sub">日均 Avg/day ${mDays ? Math.round(mTotal / mDays) : 0}</div></div>
+      <div class="stat-box ${errs ? 'c-red' : ''}"><div class="stat-label">${m} 称重异常 Weight anomalies</div><div class="stat-value">${errs}</div><div class="stat-sub">可校验 Checked ${checked} · 异常率 Rate ${checked ? (errs / checked * 100).toFixed(1) + '%' : '—'}</div></div>`;
     const errByDay = {}, ordByDay = {};
     wo.forEach((o, i) => { const d = String(o.t).slice(0, 10); ordByDay[d] = (ordByDay[d] || 0) + 1; if (ws[i] === 'error') errByDay[d] = (errByDay[d] || 0) + 1; });
     const daysList = [...new Set(mRows.map(r => r.d))].sort().reverse();
-    $('pTable').innerHTML = daysList.length ? `<table class="tbl"><thead><tr><th>日期</th><th class="num">🏋️ 哑铃</th><th class="num">📦 其他</th><th class="num">合计</th><th class="num">订单数</th><th class="num">称重异常</th></tr></thead><tbody>
+    $('pTable').innerHTML = daysList.length ? `<table class="tbl"><thead><tr><th>日期 Date</th><th class="num">🏋️ 哑铃 Dumbbell</th><th class="num">📦 其他 Other</th><th class="num">合计 Total</th><th class="num">订单数 Orders</th><th class="num">称重异常 Anomalies</th></tr></thead><tbody>
       ${daysList.map(d => { const rs = mRows.filter(r => r.d === d); const a = rs.reduce((s, r) => s + db(r), 0), b = rs.reduce((s, r) => s + ot(r), 0);
         return `<tr><td>${d}</td><td class="num ${a ? 'clickable' : ''}" data-e="${emp}" data-f="${d}" data-t="${d}" data-c="dumbbell">${a || ''}</td><td class="num ${b ? 'clickable' : ''}" data-e="${emp}" data-f="${d}" data-t="${d}" data-c="other">${b || ''}</td>
-        <td class="num clickable" data-e="${emp}" data-f="${d}" data-t="${d}" data-c="all">${a + b}</td><td class="num">${ordByDay[d] || (d < (settings.cutover_date || '') ? '旧' : '')}</td><td class="num ${errByDay[d] ? 'below-avg' : ''}">${errByDay[d] || ''}</td></tr>`; }).join('')}
-      </tbody></table>` : '<p class="empty">这个月没有数据</p>';
+        <td class="num clickable" data-e="${emp}" data-f="${d}" data-t="${d}" data-c="all">${a + b}</td><td class="num">${ordByDay[d] || (d < (settings.cutover_date || '') ? '旧 old' : '')}</td><td class="num ${errByDay[d] ? 'below-avg' : ''}">${errByDay[d] || ''}</td></tr>`; }).join('')}
+      </tbody></table>` : '<p class="empty">这个月没有数据 No data this month</p>';
   } catch (e) { toast('❌ ' + e.message); }
   loaded();
 }
@@ -1053,36 +1055,36 @@ let accounts = [];
 async function loadAccounts() {
   try { accounts = await q(sbc.from('wh_accounts').select('*').order('created_at')); }
   catch (e) { toast('❌ ' + e.message); return; }
-  $('accList').innerHTML = `<table class="tbl"><thead><tr><th>用户名</th><th>角色</th><th>状态</th><th>创建</th><th></th></tr></thead><tbody>
-    ${accounts.map(a => `<tr style="${a.active ? '' : 'opacity:.45'}"><td><b>${esc(a.username)}</b>${a.user_id === me.user_id ? ' <span class="badge badge-blue">我</span>' : ''}</td>
-      <td>${a.role === 'admin' ? '<span class="badge badge-blue">管理员</span>' : '<span class="badge badge-green">员工</span>'}</td>
-      <td>${a.active ? '启用' : '停用'}</td><td class="muted">${String(a.created_at).slice(0, 10)}</td>
-      <td>${a.user_id === me.user_id ? '' : `<button class="btn btn-ghost btn-sm" data-acc-pw="${a.user_id}">重设密码</button>
-        <button class="btn btn-ghost btn-sm" data-acc-role="${a.user_id}">${a.role === 'admin' ? '改为员工' : '设为管理员'}</button>
-        <button class="btn ${a.active ? 'btn-danger' : 'btn-ghost'} btn-sm" data-acc-act="${a.user_id}">${a.active ? '停用' : '启用'}</button>`}</td></tr>`).join('')}
+  $('accList').innerHTML = `<table class="tbl"><thead><tr><th>用户名 Username</th><th>角色 Role</th><th>状态 Status</th><th>创建 Created</th><th></th></tr></thead><tbody>
+    ${accounts.map(a => `<tr style="${a.active ? '' : 'opacity:.45'}"><td><b>${esc(a.username)}</b>${a.user_id === me.user_id ? ' <span class="badge badge-blue">我 Me</span>' : ''}</td>
+      <td>${a.role === 'admin' ? '<span class="badge badge-blue">管理员 Admin</span>' : '<span class="badge badge-green">员工 Staff</span>'}</td>
+      <td>${a.active ? '启用 Active' : '停用 Disabled'}</td><td class="muted">${String(a.created_at).slice(0, 10)}</td>
+      <td>${a.user_id === me.user_id ? '' : `<button class="btn btn-ghost btn-sm" data-acc-pw="${a.user_id}">重设密码 Reset password</button>
+        <button class="btn btn-ghost btn-sm" data-acc-role="${a.user_id}">${a.role === 'admin' ? '改为员工 Make staff' : '设为管理员 Make admin'}</button>
+        <button class="btn ${a.active ? 'btn-danger' : 'btn-ghost'} btn-sm" data-acc-act="${a.user_id}">${a.active ? '停用 Disable' : '启用 Enable'}</button>`}</td></tr>`).join('')}
     </tbody></table>`;
 }
 async function createAccount() {
   const u = $('naUser').value.trim().toLowerCase(), p = $('naPwd').value, role = $('naRole').value;
-  if (!/^[a-z0-9._-]{2,30}$/.test(u)) { toast('用户名只能用英文小写、数字、点、横线，2-30位'); return; }
-  if (p.length < 6) { toast('密码至少6位'); return; }
-  loading('创建中...');
+  if (!/^[a-z0-9._-]{2,30}$/.test(u)) { toast('用户名只能用英文小写、数字、点、横线，2-30位 Username: a-z 0-9 . _ - (2–30)'); return; }
+  if (p.length < 6) { toast('密码至少6位 Password min 6'); return; }
+  loading('创建中 Creating...');
   try {
     // 用单独的请求注册，不影响当前管理员的登录状态
     const res = await fetch(`${SB_URL}/auth/v1/signup`, { method: 'POST', headers: { apikey: SB_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: `${u}@${EMAIL_DOMAIN}`, password: p }) });
     const j = await res.json();
     if (!res.ok) throw new Error(j.msg || j.error_description || j.message || ('HTTP ' + res.status));
     const user = j.user || j;
-    if (!user.id) throw new Error('注册返回异常');
+    if (!user.id) throw new Error('注册返回异常 Unexpected signup response');
     if (!j.access_token && !user.email_confirmed_at && !user.confirmed_at) {
-      toast('⚠ Supabase 开着"邮箱确认"，新账号登录不了。请按说明关掉 Confirm email', 8000);
+      toast('⚠ Supabase 开着"邮箱确认"，新账号登录不了。请关掉 Confirm email — new accounts cannot log in until you turn off Confirm email', 8000);
     }
     await rpc('wh_admin_add_account', { p_user: user.id, p_username: u, p_role: role });
     $('naUser').value = ''; $('naPwd').value = '';
-    toast('✅ 已创建 ' + u);
+    toast('✅ 已创建 Created ' + u);
     loadAccounts();
   } catch (e) {
-    toast('❌ ' + (/already registered|already exists/i.test(e.message) ? '这个用户名已经存在' : e.message), 6000);
+    toast('❌ ' + (/already registered|already exists/i.test(e.message) ? '这个用户名已经存在 Username already exists' : e.message), 6000);
   }
   loaded();
 }
@@ -1092,47 +1094,47 @@ function renderEmpAdmin() {
   const byEmp = {};
   Object.entries(aliases).forEach(([a, id]) => (byEmp[id] = byEmp[id] || []).push(a));
   const list = [...employees].sort((a, b) => (b.active - a.active) || a.name.localeCompare(b.name));
-  $('empList').innerHTML = `<table class="tbl"><thead><tr><th>姓名</th><th>马帮别名</th><th>状态</th><th></th></tr></thead><tbody>
+  $('empList').innerHTML = `<table class="tbl"><thead><tr><th>姓名 Name</th><th>马帮别名 Mabang names</th><th>状态 Status</th><th></th></tr></thead><tbody>
     ${list.map(e => `<tr style="${e.active ? '' : 'opacity:.45'}"><td><b>${esc(e.name)}</b></td>
-      <td>${(byEmp[e.id] || []).map(a => `<span class="badge badge-gray mono">${esc(a)}</span> `).join('')}<button class="btn btn-ghost btn-sm" data-alias-add="${e.id}">+ 别名</button></td>
-      <td>${e.active ? '在职' : '停用'}</td>
-      <td><button class="btn btn-ghost btn-sm" data-emp-ren="${e.id}">改名</button>
-        <button class="btn ${e.active ? 'btn-danger' : 'btn-ghost'} btn-sm" data-emp-act="${e.id}">${e.active ? '停用' : '启用'}</button></td></tr>`).join('')}
+      <td>${(byEmp[e.id] || []).map(a => `<span class="badge badge-gray mono">${esc(a)}</span> `).join('')}<button class="btn btn-ghost btn-sm" data-alias-add="${e.id}">+ 别名 Alias</button></td>
+      <td>${e.active ? '在职 Active' : '停用 Disabled'}</td>
+      <td><button class="btn btn-ghost btn-sm" data-emp-ren="${e.id}">改名 Rename</button>
+        <button class="btn ${e.active ? 'btn-danger' : 'btn-ghost'} btn-sm" data-emp-act="${e.id}">${e.active ? '停用 Disable' : '启用 Enable'}</button></td></tr>`).join('')}
     </tbody></table>`;
 }
 async function addEmployee() {
   const name = $('neName').value.trim().toUpperCase();
   if (!name) return;
-  if (employees.some(e => e.name.toLowerCase() === name.toLowerCase())) { toast('已存在'); return; }
+  if (employees.some(e => e.name.toLowerCase() === name.toLowerCase())) { toast('已存在 Already exists'); return; }
   try {
     const rows = await q(sbc.from('wh_employees').insert({ name, pin: '0000', role: 'worker', active: true }).select('id,name,active'));
-    employees.push(rows[0]); $('neName').value = ''; fillEmpSelects(); renderEmpAdmin(); toast('✅ 已添加');
+    employees.push(rows[0]); $('neName').value = ''; fillEmpSelects(); renderEmpAdmin(); toast('✅ 已添加 Added');
   } catch (e) { toast('❌ ' + e.message); }
 }
 
 // ---- SKU classification ----
 let skuRows = [];
 async function loadSkuAdmin() {
-  loading('加载 SKU...');
+  loading('加载 SKU Loading...');
   try { skuRows = await rpc('wh_sku_list', { p_days: 90 }); renderSkuAdmin(); } catch (e) { toast('❌ ' + e.message); }
   loaded();
 }
 function renderSkuAdmin() {
   const k = $('skuSearch').value.trim().toUpperCase();
   const list = k ? skuRows.filter(r => r.sku.includes(k)) : skuRows;
-  $('skuList').innerHTML = list.length ? `<table class="tbl"><thead><tr><th>SKU</th><th class="num">单重(g)</th><th class="num">近90天件数</th><th>当前归类</th><th>来源</th><th></th></tr></thead><tbody>
+  $('skuList').innerHTML = list.length ? `<table class="tbl"><thead><tr><th>SKU</th><th class="num">单重 Unit(g)</th><th class="num">近90天件数 Pcs (90d)</th><th>当前归类 Category</th><th>来源 Source</th><th></th></tr></thead><tbody>
     ${list.slice(0, 500).map(r => `<tr><td class="mono">${esc(r.sku)}</td><td class="num">${fmt(r.uw)}</td><td class="num">${fmt(r.n)}</td>
-      <td>${r.db ? '🏋️ 哑铃' : '📦 其他'}</td><td class="muted">${r.ov ? '手动' : '规则'}</td>
-      <td><button class="btn btn-ghost btn-sm" data-sku="${esc(r.sku)}" data-cat="${r.db ? 'other' : 'dumbbell'}">改为${r.db ? '其他' : '哑铃'}</button>
-      ${r.ov ? `<button class="btn btn-ghost btn-sm" data-sku="${esc(r.sku)}" data-cat="">恢复规则</button>` : ''}</td></tr>`).join('')}
-    </tbody></table>` : '<p class="empty">还没有导入数据</p>';
+      <td>${r.db ? '🏋️ 哑铃 Dumbbell' : '📦 其他 Other'}</td><td class="muted">${r.ov ? '手动 Manual' : '规则 Rule'}</td>
+      <td><button class="btn btn-ghost btn-sm" data-sku="${esc(r.sku)}" data-cat="${r.db ? 'other' : 'dumbbell'}">改为 → ${r.db ? '其他 Other' : '哑铃 Dumbbell'}</button>
+      ${r.ov ? `<button class="btn btn-ghost btn-sm" data-sku="${esc(r.sku)}" data-cat="">恢复规则 Use rule</button>` : ''}</td></tr>`).join('')}
+    </tbody></table>` : '<p class="empty">还没有导入数据 No imported data yet</p>';
 }
 async function setSkuClass(sku, cat) {
-  loading('更新中...');
+  loading('更新中 Updating...');
   try {
     await rpc('wh_set_sku_class', { p_sku: sku, p_cat: cat || null });
     if (cat) skuOverrides[sku] = cat; else delete skuOverrides[sku];
-    skuRows = await rpc('wh_sku_list', { p_days: 90 }); renderSkuAdmin(); toast('✅ 已更新，历史订单同步更新');
+    skuRows = await rpc('wh_sku_list', { p_days: 90 }); renderSkuAdmin(); toast('✅ 已更新，历史订单同步更新 Updated, imported orders updated too');
   } catch (e) { toast('❌ ' + e.message); }
   loaded();
 }
@@ -1178,11 +1180,11 @@ function wire() {
   ['wPct', 'wG'].forEach(id => $(id).addEventListener('input', renderWeight));
   $('wSku').addEventListener('input', renderWeight);
   $('wStats').addEventListener('click', e => { const b = e.target.closest('[data-wf]'); if (b) { wFilter = wFilter === b.dataset.wf ? 'all' : b.dataset.wf; renderWeight(); } });
-  $('wTable').addEventListener('click', e => { const b = e.target.closest('[data-cp]'); if (b) copyText(b.dataset.cp).then(() => toast('已复制 ' + b.dataset.cp, 1200)); });
+  $('wTable').addEventListener('click', e => { const b = e.target.closest('[data-cp]'); if (b) copyText(b.dataset.cp).then(() => toast('已复制 Copied ' + b.dataset.cp, 1200)); });
   $('wCopyFiltered').onclick = () => copyWeight(false);
   $('wCopyErr').onclick = () => copyWeight(true);
   $('wSaveTol').onclick = async () => {
-    try { await saveSetting('tol_pct', Number($('wPct').value)); await saveSetting('tol_g', Number($('wG').value)); toast('✅ 已设为默认'); } catch (e) { toast('❌ ' + e.message); }
+    try { await saveSetting('tol_pct', Number($('wPct').value)); await saveSetting('tol_g', Number($('wG').value)); toast('✅ 已设为默认 Saved as default'); } catch (e) { toast('❌ ' + e.message); }
   };
 
   // person
@@ -1198,9 +1200,9 @@ function wire() {
     const id = b.dataset.accPw || b.dataset.accRole || b.dataset.accAct;
     const a = accounts.find(x => x.user_id === id); if (!a) return;
     if (b.dataset.accPw) {
-      modal(`<h2>重设 ${esc(a.username)} 的密码</h2><div class="field"><label>新密码（至少6位）</label><input id="rpw"></div>`, async ov => {
-        const p = ov.querySelector('#rpw').value; if (p.length < 6) { toast('至少6位'); return false; }
-        await rpc('wh_admin_set_password', { p_user: id, p_pw: p }); toast('✅ 已重设');
+      modal(`<h2>重设 ${esc(a.username)} 的密码 Reset password</h2><div class="field"><label>新密码（至少6位）New password (min 6)</label><input id="rpw"></div>`, async ov => {
+        const p = ov.querySelector('#rpw').value; if (p.length < 6) { toast('至少6位 Min 6 characters'); return false; }
+        await rpc('wh_admin_set_password', { p_user: id, p_pw: p }); toast('✅ 已重设 Password reset');
       });
       return;
     }
@@ -1215,16 +1217,16 @@ function wire() {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.aliasAdd) {
       const emp = employees.find(x => x.id === b.dataset.aliasAdd);
-      modal(`<h2>给 ${esc(emp.name)} 加马帮别名</h2><div class="field"><label>马帮里的发货员名字（不分大小写）</label><input id="nal"></div>
-        <p class="muted">如果这个名字之前指向别人，已导入的订单会改算到 ${esc(emp.name)}</p>`, async ov => {
+      modal(`<h2>给 ${esc(emp.name)} 加马帮别名 Add Mabang name</h2><div class="field"><label>马帮里的发货员名字（不分大小写）Packer name in Mabang (case-insensitive)</label><input id="nal"></div>
+        <p class="muted">如果这个名字之前指向别人，已导入的订单会改算到 ${esc(emp.name)}。If this name pointed to someone else, imported orders move to ${esc(emp.name)}.</p>`, async ov => {
         const a = ov.querySelector('#nal').value.trim().toLowerCase(); if (!a) return false;
         const n = await rpc('wh_set_alias', { p_alias: a, p_emp: emp.id }); aliases[a] = emp.id;
-        toast(`✅ 已保存，更新了 ${n} 单`); renderEmpAdmin();
+        toast(`✅ 已保存，更新了 ${n} 单 Saved, ${n} orders updated`); renderEmpAdmin();
       });
     }
     if (b.dataset.empRen) {
       const emp = employees.find(x => x.id === b.dataset.empRen);
-      modal(`<h2>改名</h2><div class="field"><label>新名字</label><input id="ren" value="${esc(emp.name)}"></div>`, async ov => {
+      modal(`<h2>改名 Rename</h2><div class="field"><label>新名字 New name</label><input id="ren" value="${esc(emp.name)}"></div>`, async ov => {
         const n = ov.querySelector('#ren').value.trim().toUpperCase(); if (!n) return false;
         await q(sbc.from('wh_employees').update({ name: n }).eq('id', emp.id)); emp.name = n; fillEmpSelects(); renderEmpAdmin();
       });
@@ -1238,11 +1240,11 @@ function wire() {
   $('skuList').addEventListener('click', e => { const b = e.target.closest('[data-sku]'); if (b) setSkuClass(b.dataset.sku, b.dataset.cat); });
   $('setCutGo').onclick = async () => {
     const v = $('setCut').value; if (!v) return;
-    if (!confirm(`切换日改为 ${v}？\n${v} 之前读旧手工数据，之后读导入数据。`)) return;
-    try { await saveSetting('cutover_date', v); toast('✅ 已保存'); } catch (e) { toast('❌ ' + e.message); }
+    if (!confirm(`切换日改为 ${v}？Change cutover to ${v}?\n${v} 之前读旧手工数据，之后读导入数据。`)) return;
+    try { await saveSetting('cutover_date', v); toast('✅ 已保存 Saved'); } catch (e) { toast('❌ ' + e.message); }
   };
   $('setTolGo').onclick = async () => {
-    try { await saveSetting('tol_pct', Number($('setPct').value)); await saveSetting('tol_g', Number($('setG').value)); $('wPct').value = settings.tol_pct; $('wG').value = settings.tol_g; toast('✅ 已保存'); } catch (e) { toast('❌ ' + e.message); }
+    try { await saveSetting('tol_pct', Number($('setPct').value)); await saveSetting('tol_g', Number($('setG').value)); $('wPct').value = settings.tol_pct; $('wG').value = settings.tol_g; toast('✅ 已保存 Saved'); } catch (e) { toast('❌ ' + e.message); }
   };
 }
 
@@ -1268,10 +1270,10 @@ async function weProcessFile(file) {
     wePdfBuf = await file.arrayBuffer();
     wePdfDoc = await pdfjsLib.getDocument({ data: wePdfBuf.slice(0) }).promise;
     wePages = [];
-    for (let i = 1; i <= wePdfDoc.numPages; i++) { $('loadingMsg').textContent = `处理 ${i}/${wePdfDoc.numPages}...`; wePages.push(await weProcessPage(i)); }
+    for (let i = 1; i <= wePdfDoc.numPages; i++) { $('loadingMsg').textContent = `处理 Processing ${i}/${wePdfDoc.numPages}...`; wePages.push(await weProcessPage(i)); }
     $('weUploadArea').classList.add('hidden'); $('weWorkArea').classList.remove('hidden');
     weRenderStats(); weRenderGrid();
-  } catch (e) { alert('PDF处理失败: ' + e.message); }
+  } catch (e) { alert('PDF处理失败 PDF failed: ' + e.message); }
   loaded();
 }
 async function weProcessPage(num) {
@@ -1323,20 +1325,20 @@ function weBuildBBoxCombined(item, match, vp) {
 }
 function weRenderStats() {
   const jt = wePages.filter(p => p.type === 'jt_tiktok').length, pk = wePages.filter(p => p.type === 'picking_slip').length;
-  $('weStats').textContent = `共${wePages.length}页 | J&T: ${jt} | 拣货单: ${pk}`;
+  $('weStats').textContent = `共 Pages ${wePages.length} | J&T: ${jt} | 拣货单 Pick: ${pk}`;
 }
 function weRenderGrid() {
   const grid = $('weGrid'); grid.innerHTML = '';
   wePages.forEach((pd, idx) => {
     const card = document.createElement('div');
     card.className = 'we-card' + (pd.type === 'jt_tiktok' ? ' type-jt' : '');
-    const label = pd.type === 'jt_tiktok' ? 'J&T TikTok' : pd.type === 'picking_slip' ? '拣货单' : '其他';
+    const label = pd.type === 'jt_tiktok' ? 'J&T TikTok' : pd.type === 'picking_slip' ? '拣货单 Pick' : '其他 Other';
     card.innerHTML = `<div class="we-card-header"><span>P${pd.pageNum}</span><span class="badge ${pd.type === 'jt_tiktok' ? 'badge-blue' : 'badge-green'}">${label}</span></div>`;
     const prev = document.createElement('div'); prev.className = 'we-card-preview'; prev.appendChild(pd.canvas); card.appendChild(prev);
     if (pd.type === 'jt_tiktok') {
       const ctrl = document.createElement('div');
       ctrl.className = 'we-card-controls' + (pd.newWeight ? ' weight-modified' : ''); ctrl.id = `wectrl-${idx}`;
-      ctrl.innerHTML = `<label>${pd.origWeight ? `原${pd.origWeight}KG →` : '未检测'}</label>
+      ctrl.innerHTML = `<label>${pd.origWeight ? `原 Orig ${pd.origWeight}KG →` : '未检测 Not found'}</label>
         <input type="text" id="wew-${idx}" value="${pd.newWeight || ''}" placeholder="${pd.origWeight || '0.000'}" onchange="weApplySingle(${idx})" onkeydown="if(event.key==='Enter')weApplySingle(${idx})"><span class="muted">KG</span>`;
       card.appendChild(ctrl);
     }
@@ -1345,10 +1347,10 @@ function weRenderGrid() {
 }
 function weNormalize(v) { const s = String(v).trim().replace(/[^0-9.]/g, ''); if (!s) return null; const n = parseFloat(s); return (isNaN(n) || n <= 0) ? null : n.toFixed(3); }
 function weApplyAll() {
-  const w = weNormalize($('weDefaultWeight').value); if (!w) { toast('请输入有效重量'); return; }
+  const w = weNormalize($('weDefaultWeight').value); if (!w) { toast('请输入有效重量 Invalid weight'); return; }
   let c = 0;
   wePages.forEach((pd, i) => { if (pd.type === 'jt_tiktok' && pd.weightInfo) { const inp = $(`wew-${i}`); if (inp) inp.value = w; pd.newWeight = w; c++; } });
-  weUpdateAllPreviews(); toast(`已应用到${c}张面单`);
+  weUpdateAllPreviews(); toast(`已应用到${c}张面单 Applied to ${c} labels`);
 }
 async function weApplySingle(idx) { const inp = $(`wew-${idx}`); const w = weNormalize(inp.value); if (!w) { inp.value = ''; return; } inp.value = w; wePages[idx].newWeight = w; await weUpdatePreview(idx); }
 async function weUpdateAllPreviews() { for (let i = 0; i < wePages.length; i++) if (wePages[i].type === 'jt_tiktok' && wePages[i].newWeight && wePages[i].weightInfo) await weUpdatePreview(i); }
@@ -1363,12 +1365,12 @@ async function weUpdatePreview(idx) {
   const ctrl = $(`wectrl-${idx}`); if (ctrl) ctrl.classList.add('weight-modified');
 }
 function weReset() {
-  if (!confirm('重置所有修改？')) return;
+  if (!confirm('重置所有修改？Reset all?')) return;
   wePages.forEach((pd, i) => { if (pd.type === 'jt_tiktok') { pd.newWeight = ''; const inp = $(`wew-${i}`); if (inp) inp.value = ''; const c = $(`wectrl-${i}`); if (c) c.classList.remove('weight-modified'); } });
   (async () => { for (const pd of wePages) if (pd.type === 'jt_tiktok') { const pg = await wePdfDoc.getPage(pd.pageNum); await pg.render({ canvasContext: pd.canvas.getContext('2d'), viewport: pg.getViewport({ scale: WE_PREVIEW_SCALE }) }).promise; } })();
 }
 async function wePrint() {
-  loading('准备打印...');
+  loading('准备打印 Preparing...');
   const pc = $('wePrintContainer'); pc.innerHTML = '';
   try {
     const fresh = await pdfjsLib.getDocument({ data: wePdfBuf.slice(0) }).promise;
@@ -1386,10 +1388,10 @@ async function wePrint() {
       const div = document.createElement('div'); div.className = 'print-page'; div.appendChild(img); pc.appendChild(div);
     }
     loaded(); setTimeout(() => window.print(), 800);
-  } catch (e) { loaded(); alert('打印失败: ' + e.message); }
+  } catch (e) { loaded(); alert('打印失败 Print failed: ' + e.message); }
 }
 function weReupload() {
-  if (wePages.some(p => p.newWeight) && !confirm('有未打印的修改，确定重新上传？')) return;
+  if (wePages.some(p => p.newWeight) && !confirm('有未打印的修改，确定重新上传？Unprinted changes, re-upload anyway?')) return;
   wePdfDoc = null; wePdfBuf = null; wePages = [];
   $('weUploadArea').classList.remove('hidden'); $('weWorkArea').classList.add('hidden');
   $('weGrid').innerHTML = ''; $('weFileInput').value = ''; $('weDefaultWeight').value = '';
@@ -1403,7 +1405,7 @@ wire();
   try {
     const { data: { session } } = await sbc.auth.getSession();
     if (session) await afterAuth(); else showLogin();
-  } catch (e) { showLogin('连接失败 ' + e.message); }
+  } catch (e) { showLogin('连接失败 Connection failed: ' + e.message); }
 })();
 </script>
 </body>
