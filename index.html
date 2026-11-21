@@ -983,9 +983,21 @@ function renderWeight() {
   $('wMissing').innerHTML = ml.length ? `<table class="tbl"><thead><tr><th>SKU</th><th class="num">涉及单数 Orders</th></tr></thead><tbody>${ml.map(m => `<tr><td class="mono">${esc(m.sku)}</td><td class="num">${m.orders}</td></tr>`).join('')}</tbody></table>` : '<p class="empty">✅ 没有 None</p>';
 }
 
+let calibRows = [];
 function renderCalib(rows) {
-  $('wCalib').innerHTML = rows.length ? `<table class="tbl"><thead><tr><th>SKU</th><th class="num">马帮单重 Mabang unit(g)</th><th class="num">实称/件 中位数 Actual/pc median(g)</th><th class="num">差 Diff</th><th class="num">样本单数 Samples</th></tr></thead><tbody>
+  calibRows = rows;
+  $('wCalib').innerHTML = rows.length ? `<table class="tbl"><thead><tr><th>SKU
+      <button class="btn btn-ghost btn-sm" data-calib-copy="sku" style="margin-left:8px">⧉ 复制全部SKU Copy SKUs</button>
+      <button class="btn btn-ghost btn-sm" data-calib-copy="both">⧉ 复制SKU+建议重量 Copy SKU + weight</button></th>
+    <th class="num">马帮单重 Mabang unit(g)</th><th class="num">实称/件 中位数 Actual/pc median(g)</th><th class="num">差 Diff</th><th class="num">样本单数 Samples</th></tr></thead><tbody>
     ${rows.map(r => `<tr><td class="mono">${esc(r.sku)}</td><td class="num">${fmt(r.cur)}</td><td class="num">${fmt(r.med)}</td><td class="num below-avg">${r.med - r.cur > 0 ? '+' : ''}${fmt(r.med - r.cur)}</td><td class="num">${r.n}</td></tr>`).join('')}</tbody></table>` : '<p class="empty">✅ 暂无建议（数据积累几天后才会出现）No suggestions yet (needs a few days of data)</p>';
+}
+
+// sku: 每行一个SKU；both: SKU<Tab>建议重量(g)，粘贴到 Excel 是两列
+function copyCalib(mode) {
+  if (!calibRows.length) { toast('没有可复制的SKU Nothing to copy'); return; }
+  const txt = calibRows.map(r => mode === 'both' ? `${r.sku}\t${r.med}` : r.sku).join('\n');
+  copyText(txt).then(() => toast(`已复制 ${calibRows.length} 个SKU Copied ${calibRows.length} SKUs`));
 }
 
 function copyWeight(onlyErr) {
@@ -1183,6 +1195,7 @@ function wire() {
   $('wTable').addEventListener('click', e => { const b = e.target.closest('[data-cp]'); if (b) copyText(b.dataset.cp).then(() => toast('已复制 Copied ' + b.dataset.cp, 1200)); });
   $('wCopyFiltered').onclick = () => copyWeight(false);
   $('wCopyErr').onclick = () => copyWeight(true);
+  $('wCalib').addEventListener('click', e => { const b = e.target.closest('[data-calib-copy]'); if (b) copyCalib(b.dataset.calibCopy); });
   $('wSaveTol').onclick = async () => {
     try { await saveSetting('tol_pct', Number($('wPct').value)); await saveSetting('tol_g', Number($('wG').value)); toast('✅ 已设为默认 Saved as default'); } catch (e) { toast('❌ ' + e.message); }
   };
