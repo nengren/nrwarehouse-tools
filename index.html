@@ -263,7 +263,9 @@ tr.row-ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
           <input class="input" id="wSku" placeholder="按SKU/单号筛选 Filter..." style="width:180px">
           <span class="muted" id="wCount"></span>
           <button class="btn btn-ghost btn-sm" id="wCopyFiltered">复制当前列表单号 Copy listed IDs</button>
+          <label class="muted" style="display:inline-flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="wUnchecked"> 只看未核查 Unchecked only</label>
           <button class="btn btn-danger btn-sm" id="wCopyErr">复制全部异常单号 Copy anomaly IDs</button>
+          <button class="btn btn-ghost btn-sm" id="wCopySkus">复制当前SKU Copy listed SKUs</button>
         </div>
         <div class="tbl-wrap scroll" id="wTable"></div>
       </div>
@@ -274,6 +276,10 @@ tr.row-ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
       <div class="card">
         <div class="card-title">单重校准建议 Unit weight check <span class="muted" style="font-weight:400">近30天、只看单SKU订单、至少3单；"实称/件"含包材 Last 30 days, single-SKU orders, ≥3 orders; actual/pc includes packaging. 差距大的请核对马帮单重</span></div>
         <div class="tbl-wrap" id="wCalib"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">核查记录 Check log <span class="muted" style="font-weight:400">谁在什么时候核查/撤销了哪个包裹，只能新增不能修改 Who checked which parcel and when (append-only)</span></div>
+        <div class="tbl-wrap scroll" id="wLog"></div>
       </div>
     </div>
 
@@ -442,9 +448,12 @@ const CORE = (() => {
     const byNo = new Map(), errors = [];
     rowsText.forEach((r, i) => {
       const raw = rowsRaw[i] || {};
-      const no = String(r[cols.order] ?? '').trim();
-      if (!no) return; // blank line
-      if (/e\+/i.test(no)) { errors.push({ row: i + 2, no, msg: '平台交易号被Excel转成了科学计数法，无法识别 Order ID was turned into scientific notation by Excel' }); return; }
+      const pn = String(r[cols.order] ?? '').trim();
+      const tr = cols.track ? String(r[cols.track] ?? '').trim() : '';
+      if (!pn && !tr) return; // blank line
+      if (/e\+/i.test(pn) || /e\+/i.test(tr)) { errors.push({ row: i + 2, no: pn || tr, msg: '单号被Excel转成了科学计数法，无法识别 ID was turned into scientific notation by Excel' }); return; }
+      // 一个快递单号 = 一个包裹（拆单时同一平台单号会有多个包裹）；没有快递单号才用平台单号
+      const no = tr || pn;
       const sku = String(r[cols.sku] ?? '').trim();
       const qty = num(r[cols.qty]);
       if (!sku || qty <= 0) { errors.push({ row: i + 2, no, msg: 'SKU为空或数量≤0，已跳过该行 Empty SKU or qty ≤ 0, row skipped' }); return; }
@@ -453,7 +462,8 @@ const CORE = (() => {
         const t = parseShipTime(r[cols.time], raw[cols.time]);
         o = {
           order_no: no,
-          track_no: cols.track ? String(r[cols.track] ?? '').trim() : '',
+          platform_no: pn,
+          track_no: tr,
           ship_time: t,
           packer_raw: String(r[cols.packer] ?? '').trim(),
           actual_weight: Math.round(num(r[cols.weight])),
@@ -734,6 +744,8 @@ function renderImport() {
   const dates = P.orders.map(o => o.ship_time.slice(0, 10)).sort();
   const missingCnt = P.orders.filter(o => o.items.some(i => i.unit_weight <= 1)).length;
   const items = P.orders.reduce((s, o) => s + o.items.length, 0);
+  const pnCount = {}; P.orders.forEach(o => { if (o.platform_no) pnCount[o.platform_no] = (pnCount[o.platform_no] || 0) + 1; });
+  const splitCnt = Object.values(pnCount).filter(n => n > 1).length;
 
   // per packer preview
   const per = {};
@@ -749,7 +761,7 @@ function renderImport() {
   const empOpts = employees.filter(e => e.active).map(e => `<option value="${e.id}">${esc(e.name)}</option>`).join('');
   let html = `<div class="stat-row">
     <div class="stat-box"><div class="stat-label">文件 File</div><div class="stat-sub" style="font-weight:600;color:var(--text);word-break:break-all">${esc(imp.fileName)}</div></div>
-    <div class="stat-box"><div class="stat-label">订单数 Orders</div><div class="stat-value">${P.orders.length}</div><div class="stat-sub">${items} 行明细 lines</div></div>
+    <div class="stat-box"><div class="stat-label">包裹数 Parcels</div><div class="stat-value">${P.orders.length}</div><div class="stat-sub">${items} 行明细 lines${splitCnt ? ` · 拆单 ${splitCnt} 个平台单 split orders` : ''}</div></div>
     <div class="stat-box"><div class="stat-label">发货日期 Dates</div><div class="stat-sub" style="font-size:14px;font-weight:600;color:var(--text)">${dates[0]}${dates[0] !== dates[dates.length - 1] ? ' ~ ' + dates[dates.length - 1] : ''}</div></div>
     <div class="stat-box ${imp.existing.size ? 'c-orange' : ''}"><div class="stat-label">已导入过（将覆盖）Already imported (overwrite)</div><div class="stat-value">${imp.existing.size}</div><div class="stat-sub">不会重复计数 Not double-counted</div></div>
     <div class="stat-box ${missingCnt ? 'c-purple' : ''}"><div class="stat-label">含单重缺失SKU Missing unit weight</div><div class="stat-value">${missingCnt}</div></div>
@@ -773,7 +785,7 @@ function renderImport() {
     </tbody></table>
     <div class="row-flex" style="margin-top:14px;justify-content:flex-end">
       <button class="btn btn-ghost" id="impCancel">取消 Cancel</button>
-      <button class="btn btn-primary" id="impSave">✅ 确认保存 Save ${P.orders.length} 单 orders</button>
+      <button class="btn btn-primary" id="impSave">✅ 确认保存 Save ${P.orders.length} 个包裹 parcels</button>
     </div></div>`;
   el.innerHTML = html;
   el.querySelectorAll('.imp-map').forEach(s => {
@@ -832,7 +844,7 @@ async function saveImport() {
 
 function renderImportResult() {
   const s = imp.saved;
-  $('impArea').innerHTML = `<div class="notice ok">✅ 已保存 Saved ${s.total} 单 orders（新增 new ${s.total - s.overwritten}，覆盖 overwritten ${s.overwritten}），发货日期 Dates ${s.from}${s.from !== s.to ? ' ~ ' + s.to : ''}</div>
+  $('impArea').innerHTML = `<div class="notice ok">✅ 已保存 Saved ${s.total} 个包裹 parcels（新增 new ${s.total - s.overwritten}，覆盖 overwritten ${s.overwritten}），发货日期 Dates ${s.from}${s.from !== s.to ? ' ~ ' + s.to : ''}</div>
     <div class="row-flex"><button class="btn btn-primary" id="goW">⚖️ 查看这批的称重校验 Weight check</button><button class="btn btn-ghost" id="goO">📊 查看产量 Output</button><button class="btn btn-ghost" id="goN">继续导入 Import more</button></div>`;
   $('goW').onclick = () => { $('wFrom').value = s.from; $('wTo').value = s.to; $('wEmp').value = ''; switchPage('pageWeight'); };
   $('goO').onclick = () => {
@@ -930,7 +942,7 @@ async function refreshWeight() {
       rpc('wh_weight_orders', { p_from: f, p_to: t, p_emp: $('wEmp').value || null }),
       rpc('wh_sku_calibration', { p_from: CORE.addDays(t, -29), p_to: t }),
     ]);
-    wData = orders; renderWeight(); renderCalib(calib);
+    wData = orders; renderWeight(); renderCalib(calib); loadCheckLog();
   } catch (e) { toast('❌ ' + e.message); }
   loaded();
 }
@@ -942,19 +954,22 @@ function computeWeight() {
 
 function filteredWeight(all) {
   let list = wFilter === 'all' ? all : all.filter(o => o.st === wFilter);
+  if ($('wUnchecked').checked) list = list.filter(o => o.st === 'ok' || !o.ck);
   const k = $('wSku').value.trim().toUpperCase();
-  if (k) list = list.filter(o => o.no.toUpperCase().includes(k) || (o.tr || '').toUpperCase().includes(k) || o.it.some(i => String(i[0]).toUpperCase().includes(k)));
+  if (k) list = list.filter(o => o.no.toUpperCase().includes(k) || String(o.pn || '').toUpperCase().includes(k) || (o.tr || '').toUpperCase().includes(k) || o.it.some(i => String(i[0]).toUpperCase().includes(k)));
   return list.sort((a, b) => (ST_ORDER[a.st] - ST_ORDER[b.st]) || (Math.abs(b.dp || 0) - Math.abs(a.dp || 0)));
 }
 
 function renderWeight() {
   const all = computeWeight();
   const c = st => all.filter(o => o.st === st).length;
-  const box = (key, label, n, cls) => `<div class="stat-box click ${cls} ${wFilter === key ? 'sel' : ''}" data-wf="${key}"><div class="stat-label">${label}</div><div class="stat-value">${n}</div></div>`;
-  $('wStats').innerHTML = box('all', '全部 Total', all.length, '') + box('error', '重量异常 Anomaly', c('error'), 'c-red') +
-    box('noscale', '秤未捕获 No scale', c('noscale'), 'c-orange') + box('missing', '单重缺失 No unit wt', c('missing'), 'c-purple') + box('ok', '正常 OK', c('ok'), 'c-green');
+  const unck = st => all.filter(o => o.st === st && !o.ck).length;
+  const box = (key, label, n, cls, sub) => `<div class="stat-box click ${cls} ${wFilter === key ? 'sel' : ''}" data-wf="${key}"><div class="stat-label">${label}</div><div class="stat-value">${n}</div>${sub ? `<div class="stat-sub">${sub}</div>` : ''}</div>`;
+  const subU = st => c(st) ? `未核查 Unchecked ${unck(st)}` : '';
+  $('wStats').innerHTML = box('all', '全部包裹 Parcels', all.length, '') + box('error', '重量异常 Anomaly', c('error'), 'c-red', subU('error')) +
+    box('noscale', '秤未捕获 No scale', c('noscale'), 'c-orange', subU('noscale')) + box('missing', '单重缺失 No unit wt', c('missing'), 'c-purple', subU('missing')) + box('ok', '正常 OK', c('ok'), 'c-green');
   const list = filteredWeight(all);
-  $('wCount').textContent = `${list.length} 单 orders`;
+  $('wCount').textContent = `${list.length} 个包裹 parcels`;
   if (!list.length) { $('wTable').innerHTML = '<p class="empty">没有订单 No orders</p>'; }
   else {
     $('wTable').innerHTML = `<table class="tbl"><thead><tr><th>发货时间<br><span class="en">Time</span></th><th>平台交易号<br><span class="en">Order ID</span></th><th>快递单号<br><span class="en">Tracking</span></th><th>发货员<br><span class="en">Packer</span></th><th>SKU × 数量<br><span class="en">SKU × Qty</span></th><th class="num">件数<br><span class="en">Pcs</span></th><th class="num">理论(g)<br><span class="en">Expected</span></th><th class="num">实称(g)<br><span class="en">Actual</span></th><th class="num">偏差<br><span class="en">Diff</span></th><th>状态<br><span class="en">Status</span></th></tr></thead><tbody>
@@ -963,11 +978,11 @@ function renderWeight() {
       const badge = { error: `<span class="badge badge-red">异常 Anomaly</span><br><small class="muted">${o.diff > 0 ? '超重 Over' : '偏轻 Under'}</small>`, noscale: '<span class="badge badge-orange">秤未捕获 No scale</span>', missing: '<span class="badge badge-purple">单重缺失 No unit wt</span>', ok: '<span class="badge badge-ok">正常 OK</span>' }[o.st];
       const dev = o.dp == null ? '—' : `${o.diff > 0 ? '+' : ''}${fmt(o.diff)}g<br><small>${o.dp > 0 ? '+' : ''}${o.dp.toFixed(1)}%</small>`;
       return `<tr class="${cls}"><td class="muted">${esc(String(o.t || '').slice(5, 16).replace('T', ' '))}</td>
-        <td class="mono">${esc(o.no)} <button class="cp" data-cp="${esc(o.no)}" title="复制 Copy">⧉</button></td>
-        <td class="mono">${esc(o.tr || '')}</td><td>${esc(o.e ? empName(o.e) : o.pr)}</td>
-        <td class="wrap">${o.it.map(i => `${esc(i[0])} ×${i[1]}${i[2] <= 1 ? ' <span style="color:var(--purple)">(单重 unit ' + i[2] + 'g)</span>' : ''}`).join('<br>')}</td>
+        <td class="mono">${esc(o.pn)} <button class="cp" data-cp="${esc(o.pn)}" title="复制 Copy">⧉</button>${o.ps > 1 ? `<br><span class="badge badge-gray">拆单 Split ${o.pi}/${o.ps}</span>` : ''}</td>
+        <td class="mono">${o.tr ? `${esc(o.tr)} <button class="cp" data-cp="${esc(o.tr)}" title="复制 Copy">⧉</button>` : ''}</td><td>${esc(o.e ? empName(o.e) : o.pr)}</td>
+        <td class="wrap">${o.it.map(i => `${esc(i[0])} <button class="cp" data-cp="${esc(i[0])}" title="复制 Copy">⧉</button> ×${i[1]}${i[2] <= 1 ? ' <span style="color:var(--purple)">(单重 unit ' + i[2] + 'g)</span>' : ''}`).join('<br>')}</td>
         <td class="num">${o.q}</td><td class="num">${fmt(o.tw)}</td><td class="num">${fmt(o.aw)}</td>
-        <td class="num ${o.st === 'error' ? 'dev-pos' : 'dev-ok'}">${dev}</td><td>${badge}</td></tr>`;
+        <td class="num ${o.st === 'error' ? 'dev-pos' : 'dev-ok'}">${dev}</td><td>${badge}${o.st === 'ok' ? '' : checkCell(o)}</td></tr>`;
     }).join('')}</tbody></table>${list.length > 2000 ? '<p class="muted" style="padding:8px">只显示前 2000 单，请缩小范围 Showing first 2000, narrow the range</p>' : ''}`;
   }
   // by packer
@@ -1000,11 +1015,44 @@ function copyCalib(mode) {
   copyText(txt).then(() => toast(`已复制 ${calibRows.length} 个SKU Copied ${calibRows.length} SKUs`));
 }
 
+// 复制平台单号（拆单的同一平台单号只复制一次）；勾了"只看未核查"时异常单也只复制未核查的
 function copyWeight(onlyErr) {
   const all = computeWeight();
-  const list = onlyErr ? all.filter(o => o.st === 'error') : filteredWeight(all);
-  if (!list.length) { toast('没有可复制的单号 Nothing to copy'); return; }
-  copyText(list.map(o => o.no).join('\n')).then(() => toast(`已复制 ${list.length} 个单号 Copied ${list.length} IDs`));
+  let list = onlyErr ? all.filter(o => o.st === 'error') : filteredWeight(all);
+  if (onlyErr && $('wUnchecked').checked) list = list.filter(o => !o.ck);
+  const ids = [...new Set(list.map(o => o.pn))];
+  if (!ids.length) { toast('没有可复制的单号 Nothing to copy'); return; }
+  copyText(ids.join('\n')).then(() => toast(`已复制 ${ids.length} 个单号 Copied ${ids.length} IDs`));
+}
+// 复制当前列表里的全部 SKU（去重，保留马帮原始写法）
+function copyListedSkus() {
+  const seen = new Set(), out = [];
+  filteredWeight(computeWeight()).forEach(o => o.it.forEach(i => { const k = String(i[0]).toUpperCase(); if (!seen.has(k)) { seen.add(k); out.push(i[0]); } }));
+  if (!out.length) { toast('没有可复制的SKU Nothing to copy'); return; }
+  copyText(out.join('\n')).then(() => toast(`已复制 ${out.length} 个SKU Copied ${out.length} SKUs`));
+}
+
+const fmtTs = ts => { if (!ts) return ''; const d = new Date(ts); return `${CORE.ymd(d).slice(5)} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+function checkCell(o) {
+  return o.ck
+    ? `<div class="muted" style="margin-top:4px">✓ 已核查 Checked · <b>${esc(o.ck)}</b> ${fmtTs(o.ca)} <button class="cp" data-uncheck="${esc(o.no)}" title="撤销 Undo">↺</button></div>`
+    : `<div style="margin-top:4px"><button class="btn btn-ghost btn-sm" data-check="${esc(o.no)}">✓ 已核查 Mark checked</button></div>`;
+}
+async function setChecked(no, checked) {
+  try {
+    const r = await rpc('wh_set_checked', { p_order: no, p_checked: checked, p_note: null });
+    const o = wData.find(x => x.no === no); if (o) { o.ck = r.ck; o.ca = r.ca; }
+    renderWeight(); loadCheckLog();
+    toast(checked ? '✅ 已标记核查 Marked checked' : '已撤销 Undone', 1500);
+  } catch (e) { toast('❌ ' + e.message); }
+}
+async function loadCheckLog() {
+  try {
+    const rows = await rpc('wh_check_log_list', { p_from: $('wFrom').value, p_to: $('wTo').value });
+    $('wLog').innerHTML = rows.length ? `<table class="tbl"><thead><tr><th>时间 Time</th><th>核查人 By</th><th>操作 Action</th><th>平台交易号 Order ID</th><th>快递单号 Tracking</th><th class="num">理论 Expected(g)</th><th class="num">实称 Actual(g)</th></tr></thead><tbody>
+      ${rows.map(l => `<tr><td class="muted">${fmtTs(l.at)}</td><td><b>${esc(l.u)}</b></td><td>${l.a === 'check' ? '✓ 已核查 Checked' : '↺ 撤销 Undone'}</td><td class="mono">${esc(l.pn || '')}</td><td class="mono">${esc(l.no)}</td><td class="num">${fmt(l.tw)}</td><td class="num">${fmt(l.aw)}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="empty">还没有核查记录 No checks yet</p>';
+  } catch (e) { $('wLog').innerHTML = `<p class="empty">❌ ${esc(e.message)}</p>`; }
 }
 
 // =============================================
@@ -1192,7 +1240,13 @@ function wire() {
   ['wPct', 'wG'].forEach(id => $(id).addEventListener('input', renderWeight));
   $('wSku').addEventListener('input', renderWeight);
   $('wStats').addEventListener('click', e => { const b = e.target.closest('[data-wf]'); if (b) { wFilter = wFilter === b.dataset.wf ? 'all' : b.dataset.wf; renderWeight(); } });
-  $('wTable').addEventListener('click', e => { const b = e.target.closest('[data-cp]'); if (b) copyText(b.dataset.cp).then(() => toast('已复制 Copied ' + b.dataset.cp, 1200)); });
+  $('wTable').addEventListener('click', e => {
+    const b = e.target.closest('[data-cp]'); if (b) { copyText(b.dataset.cp).then(() => toast('已复制 Copied ' + b.dataset.cp, 1200)); return; }
+    const c = e.target.closest('[data-check]'); if (c) { setChecked(c.dataset.check, true); return; }
+    const u = e.target.closest('[data-uncheck]'); if (u && confirm('撤销核查？Undo check?')) setChecked(u.dataset.uncheck, false);
+  });
+  $('wUnchecked').addEventListener('change', renderWeight);
+  $('wCopySkus').onclick = copyListedSkus;
   $('wCopyFiltered').onclick = () => copyWeight(false);
   $('wCopyErr').onclick = () => copyWeight(true);
   $('wCalib').addEventListener('click', e => { const b = e.target.closest('[data-calib-copy]'); if (b) copyCalib(b.dataset.calibCopy); });
