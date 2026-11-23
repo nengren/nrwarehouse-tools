@@ -133,6 +133,12 @@ tr.row-ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .inner-tabs{display:flex;gap:2px;margin-bottom:16px;border-bottom:2px solid var(--border-light)}
 .inner-tab{padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text2);border:none;border-bottom:2px solid transparent;margin-bottom:-2px;background:none}
 .inner-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px}
+.cal-day{border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 8px;font-size:12px;background:#fff}
+.cal-day .n{font-size:18px;font-weight:700}
+.cal-day.zero{background:var(--red-light);border-color:var(--red)}.cal-day.zero .n{color:var(--red);font-size:13px}
+.cal-day.old{background:var(--border-light);color:var(--text3)}
+.cal-day.today{outline:2px solid var(--blue)}
 .row-flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:1000px){.two-col{grid-template-columns:1fr}}
@@ -207,6 +213,10 @@ tr.row-ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
         <p class="muted" style="margin-top:6px;">需要的列 Required columns：平台交易号、发货时间、发货员、库存SKU、数量、单位重量、订单重量（快递单号可选 tracking no. optional）</p>
       </div>
       <div id="impArea" style="margin-top:16px;"></div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-title">最近30天导入情况 Last 30 days imported <span class="muted" style="font-weight:400">按发货日期统计包裹数；红色 = 没有数据，可能忘了导入 Parcels by ship date; red = no data, maybe not imported</span></div>
+        <div id="impCal" class="cal-grid"></div>
+      </div>
     </div>
 
     <!-- ===== OVERVIEW ===== -->
@@ -233,11 +243,16 @@ tr.row-ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
           <button data-v="other">📦 其他 Other</button>
           <button data-v="all">全部 All</button>
         </div>
+        <div class="seg" id="ovMetric">
+          <button data-v="pcs" class="active">按件数 By pcs</button>
+          <button data-v="orders">按单数 By orders</button>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="ovExport">⬇ 导出Excel Export</button>
         <span class="muted" id="ovRange"></span>
       </div>
       <div class="stat-row" id="ovStats"></div>
       <div class="card">
-        <div class="card-title">发货员产量 Packer output <span class="muted" style="font-weight:400">按日均排序 Sorted by daily avg · <span style="color:var(--red)">红色 = 日均低于平均 Red = below average</span> · 点数字看SKU明细 Click a number for SKU details</span></div>
+        <div class="card-title">发货员产量 Packer output <span class="muted" style="font-weight:400">单数=包裹数 Orders = parcels · 按日均排序 Sorted by daily avg · <span style="color:var(--red)">红色 = 日均低于平均 Red = below average</span> · 点数字看SKU明细 Click a number for SKU details</span></div>
         <div class="tbl-wrap" id="ovTable"></div>
       </div>
     </div>
@@ -337,6 +352,13 @@ tr.row-ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
           <div class="card-title">切换日 Cutover date</div>
           <p class="muted" style="margin-bottom:10px">这一天之前的产量读旧系统（手工录入），从这一天起读导入的马帮数据。一般不用改。<br>Before this date: old manual records. From this date: imported Mabang data. Usually no need to change.</p>
           <div class="row-flex"><input type="date" class="input" id="setCut"><button class="btn btn-primary btn-sm" id="setCutGo">保存 Save</button></div>
+        </div>
+        <div class="card">
+          <div class="card-title">称重排除 SKU Excluded from weight check</div>
+          <p class="muted" style="margin-bottom:10px">一行一个。按开头匹配、不分大小写：填 <b>IN-</b> 会排除 in-10mm-d、IN-20MM-W 等。包裹里只要有一个被排除的 SKU，整个包裹不参与称重校验；产量照常统计。<br>
+            One per line. Matches the start of the SKU, case-insensitive: <b>IN-</b> excludes in-10mm-d, IN-20MM-W… A parcel with any excluded SKU is skipped in weight check; output still counts it. Use <b>*</b> as wildcard, e.g. <b>*SEAWEED*</b>.</p>
+          <textarea class="input" id="setExclude" rows="5" style="width:320px;font-family:ui-monospace,Menlo,monospace" placeholder="IN-"></textarea>
+          <div class="row-flex" style="margin-top:8px"><button class="btn btn-primary btn-sm" id="setExcludeGo">保存 Save</button><span class="muted" id="setExcludeHint"></span></div>
         </div>
         <div class="card">
           <div class="card-title">称重默认阈值 Default weight tolerance</div>
@@ -501,7 +523,15 @@ const CORE = (() => {
     return { st, diff, dp };
   }
 
-  return { ymd, addDays, weekStart, monthStart, monthEnd, daysBetween, dateList, periodRange,
+  // 称重排除：按开头匹配、不分大小写；含 * 时按通配符整串匹配（如 *SEAWEED*）
+  function makeExcluder(patterns) {
+    const ps = (patterns || []).map(p => String(p).trim()).filter(Boolean).map(p => p.includes('*')
+      ? new RegExp('^' + p.split('*').map(x => x.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$', 'i')
+      : p.toUpperCase());
+    return sku => { const u = String(sku ?? '').trim().toUpperCase(); return ps.some(p => typeof p === 'string' ? u.startsWith(p) : p.test(u)); };
+  }
+
+  return { makeExcluder, ymd, addDays, weekStart, monthStart, monthEnd, daysBetween, dateList, periodRange,
            findCols, parseShipTime, parseRows, ruleDumbbell, isDumbbell, weightStatus, REQUIRED };
 })();
 if (typeof module !== 'undefined') module.exports = CORE;
@@ -524,7 +554,7 @@ let me = null;                 // {user_id, username, role}
 let employees = [];            // wh_employees rows
 let aliases = {};              // alias(lower) -> employee_id
 let skuOverrides = {};         // SKU(upper) -> 'dumbbell'|'other'
-let settings = { cutover_date: null, tol_pct: 10, tol_g: 50 };
+let settings = { cutover_date: null, tol_pct: 10, tol_g: 50, weight_exclude: [] };
 
 // ---------- helpers ----------
 const $ = id => document.getElementById(id);
@@ -665,6 +695,7 @@ function switchPage(id) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === id));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === id));
   closePopup();
+  if (id === 'pageImport') loadImportCalendar();
   if (id === 'pageOverview') refreshOverview();
   if (id === 'pageWeight') refreshWeight();
   if (id === 'pagePerson') refreshPerson();
@@ -834,12 +865,30 @@ async function saveImport() {
     }
     const dates = P.orders.map(o => o.ship_time.slice(0, 10)).sort();
     imp.saved = { total: done, overwritten: imp.existing.size, from: dates[0], to: dates[dates.length - 1] };
+    loadImportCalendar();
     fillEmpSelects();
   } catch (e) {
     toast('❌ 保存失败 Save failed: ' + e.message, 6000);
   }
   loaded();
   renderImport();
+}
+
+const WD = ['日 Sun', '一 Mon', '二 Tue', '三 Wed', '四 Thu', '五 Fri', '六 Sat'];
+async function loadImportCalendar() {
+  const t = today(), from = CORE.addDays(t, -29);
+  try {
+    const rows = await rpc('wh_import_calendar', { p_from: from, p_to: t });
+    const m = {}; rows.forEach(r => m[r.d] = r);
+    const cut = settings.cutover_date || '';
+    $('impCal').innerHTML = CORE.dateList(from, t).reverse().map(d => {
+      const r = m[d], old = d < cut, wd = WD[new Date(d + 'T00:00:00').getDay()];
+      const cls = old ? 'old' : (r ? '' : 'zero');
+      return `<div class="cal-day ${cls} ${d === t ? 'today' : ''}" title="${r ? '最后导入 Last import ' + fmtTs(r.last) : ''}">
+        <div>${d.slice(5)} <span class="muted">${wd}</span></div>
+        <div class="n">${old ? '旧 old' : r ? fmt(r.n) : '未导入 None'}</div></div>`;
+    }).join('');
+  } catch (e) { $('impCal').innerHTML = `<p class="empty">❌ ${esc(e.message)}</p>`; }
 }
 
 function renderImportResult() {
@@ -858,9 +907,12 @@ function setSeg(id, v) { $(id).querySelectorAll('button').forEach(b => b.classLi
 // =============================================
 // OVERVIEW
 // =============================================
-let ovRange = null, ovData = null;
-const catVal = (r, cat) => cat === 'dumbbell' ? +r.db : cat === 'other' ? +r.ot : (+r.db + +r.ot);
+let ovRange = null, ovData = null, ovTable = null;
 const CAT_LABEL = { dumbbell: '哑铃 Dumbbell', other: '其他 Other', all: '全部 All' };
+const MET_LABEL = { pcs: '件数 Pcs', orders: '单数 Orders' };
+// 件数：SKU 数量；单数：包裹数（旧手工数据没有单数 → null）
+const pcsVal = (r, cat) => cat === 'dumbbell' ? +r.db : cat === 'other' ? +r.ot : (+r.db + +r.ot);
+const ordVal = (r, cat) => { const v = cat === 'dumbbell' ? r.do : cat === 'other' ? r.oo : r.o; return v == null ? null : +v; };
 
 async function refreshOverview() {
   const p = segValue('ovPeriod');
@@ -879,41 +931,75 @@ async function refreshOverview() {
 function aggregate(rows, cat) {
   const by = {};
   rows.forEach(r => {
-    const v = catVal(r, cat); if (!v) return;
-    const b = by[r.e] = by[r.e] || { id: r.e, total: 0, days: new Set(), byDate: {} };
-    b.total += v; b.days.add(r.d); b.byDate[r.d] = (b.byDate[r.d] || 0) + v;
+    const p = pcsVal(r, cat); if (!p) return;
+    const o = ordVal(r, cat);
+    const b = by[r.e] = by[r.e] || { id: r.e, pcs: 0, ord: 0, pcsWithOrd: 0, days: new Set(), ordDays: new Set(), pcsByDate: {}, ordByDate: {} };
+    b.pcs += p; b.days.add(r.d); b.pcsByDate[r.d] = (b.pcsByDate[r.d] || 0) + p;
+    if (o != null) { b.ord += o; b.pcsWithOrd += p; b.ordDays.add(r.d); b.ordByDate[r.d] = (b.ordByDate[r.d] || 0) + o; }
   });
-  const list = Object.values(by).map(b => ({ ...b, nd: b.days.size, avg: b.total / b.days.size }));
-  return list;
+  return Object.values(by).map(b => ({
+    ...b, nd: b.days.size, nod: b.ordDays.size,
+    avgPcs: b.pcs / b.days.size,
+    avgOrd: b.ordDays.size ? b.ord / b.ordDays.size : null,
+    ppo: b.ord ? b.pcsWithOrd / b.ord : null,
+  }));
 }
 
 function renderOverview() {
-  const cat = segValue('ovCat');
+  const cat = segValue('ovCat'), met = segValue('ovMetric');
   const [from, to] = ovRange;
   const cut = settings.cutover_date;
-  $('ovRange').textContent = `${from}${from !== to ? ' ~ ' + to : ''}` + (cut && from < cut ? `　· ${cut} 之前为旧系统手工录入数据（旧数据只有哑铃）Before ${cut}: old manual records (dumbbell only)` : '');
-  const list = aggregate(ovData, cat).sort((a, b) => b.avg - a.avg);
-  const total = list.reduce((s, b) => s + b.total, 0);
-  const personDays = list.reduce((s, b) => s + b.nd, 0);
-  const days = new Set(ovData.filter(r => catVal(r, cat) > 0).map(r => r.d)).size;
-  const groupAvg = list.length ? list.reduce((s, b) => s + b.avg, 0) / list.length : 0;
+  $('ovRange').textContent = `${from}${from !== to ? ' ~ ' + to : ''}` + (cut && from < cut ? `　· ${cut} 之前为旧系统手工录入数据（只有哑铃件数，没有单数）Before ${cut}: old manual records (dumbbell pcs only, no order count)` : '');
+  const list = aggregate(ovData, cat);
+  const avgOf = b => met === 'orders' ? b.avgOrd : b.avgPcs;
+  list.sort((a, b) => (avgOf(b) ?? -1) - (avgOf(a) ?? -1));
+  const withAvg = list.filter(b => avgOf(b) != null);
+  const groupAvg = withAvg.length ? withAvg.reduce((s, b) => s + avgOf(b), 0) / withAvg.length : 0;
+  const totPcs = list.reduce((s, b) => s + b.pcs, 0), totOrd = list.reduce((s, b) => s + b.ord, 0);
+  const pd = list.reduce((s, b) => s + b.nd, 0), pod = list.reduce((s, b) => s + b.nod, 0);
+  const days = new Set(ovData.filter(r => pcsVal(r, cat) > 0).map(r => r.d)).size;
+  const hasOld = ovData.some(r => r.o == null && pcsVal(r, cat) > 0);
   $('ovStats').innerHTML = `
-    <div class="stat-box"><div class="stat-label">${CAT_LABEL[cat]} 总产量 Total</div><div class="stat-value">${fmt(total)}</div></div>
-    <div class="stat-box"><div class="stat-label">发货员 Packers</div><div class="stat-value">${list.length}</div></div>
-    <div class="stat-box"><div class="stat-label">天数 Days</div><div class="stat-value">${days}</div></div>
-    <div class="stat-box"><div class="stat-label">人均日产量 Avg/person/day</div><div class="stat-value">${personDays ? Math.round(total / personDays) : 0}</div></div>`;
-  if (!list.length) { $('ovTable').innerHTML = '<p class="empty">这段时间没有数据 No data</p>'; return; }
+    <div class="stat-box"><div class="stat-label">${CAT_LABEL[cat]} 总件数 Total pcs</div><div class="stat-value">${fmt(totPcs)}</div></div>
+    <div class="stat-box"><div class="stat-label">${CAT_LABEL[cat]} 总单数 Total orders</div><div class="stat-value">${pod ? fmt(totOrd) : '—'}</div>${hasOld ? '<div class="stat-sub">不含旧手工数据 Excl. old records</div>' : ''}</div>
+    <div class="stat-box"><div class="stat-label">发货员 Packers</div><div class="stat-value">${list.length}</div><div class="stat-sub">天数 Days ${days}</div></div>
+    <div class="stat-box"><div class="stat-label">人均日件数 Pcs/person/day</div><div class="stat-value">${pd ? Math.round(totPcs / pd) : 0}</div></div>
+    <div class="stat-box"><div class="stat-label">人均日单数 Orders/person/day</div><div class="stat-value">${pod ? (totOrd / pod).toFixed(1) : '—'}</div></div>`;
+  if (!list.length) { $('ovTable').innerHTML = '<p class="empty">这段时间没有数据 No data</p>'; ovTable = null; return; }
   const showDates = from !== to && CORE.daysBetween(from, to) <= MAX_RANGE_DAYS;
-  const dates = showDates ? CORE.dateList(from, to).filter(d => list.some(b => b.byDate[d])) : [];
-  let h = `<table class="tbl"><thead><tr><th>发货员 Packer</th>${dates.map(d => `<th class="num">${d.slice(5)}</th>`).join('')}<th class="num">合计 Total</th><th class="num">天数 Days</th><th class="num">日均 Avg/day</th></tr></thead><tbody>`;
+  const dates = showDates ? CORE.dateList(from, to).filter(d => list.some(b => b.pcsByDate[d])) : [];
+  const cellVal = (b, d) => met === 'orders' ? (b.pcsByDate[d] ? (b.ordByDate[d] ?? '—') : '') : (b.pcsByDate[d] || '');
+  // 保存给导出用
+  ovTable = { cat, met, from, to, dates, rows: list.map(b => ({ name: empName(b.id), cells: dates.map(d => cellVal(b, d)), pcs: b.pcs, ord: b.nod ? b.ord : null, ppo: b.ppo, nd: b.nd, avg: avgOf(b) })) };
+  let h = `<table class="tbl"><thead><tr><th>发货员<br><span class="en">Packer</span></th>${dates.map(d => `<th class="num">${d.slice(5)}<br><span class="en">${MET_LABEL[met].split(' ')[1]}</span></th>`).join('')}
+    <th class="num">件数合计<br><span class="en">Total pcs</span></th><th class="num">单数合计<br><span class="en">Total orders</span></th><th class="num">件/单<br><span class="en">Pcs/order</span></th>
+    <th class="num">天数<br><span class="en">Days</span></th><th class="num">日均${met === 'orders' ? '单数' : '件数'}<br><span class="en">Avg ${met === 'orders' ? 'orders' : 'pcs'}/day</span></th></tr></thead><tbody>`;
   list.forEach(b => {
-    const low = b.avg < groupAvg;
+    const a = avgOf(b), low = a != null && a < groupAvg;
     h += `<tr><td><span class="clickable" data-person="${b.id}"><b>${esc(empName(b.id))}</b></span></td>`;
-    dates.forEach(d => { const v = b.byDate[d]; h += v ? `<td class="num clickable" data-e="${b.id}" data-f="${d}" data-t="${d}">${fmt(v)}</td>` : '<td class="num"></td>'; });
-    h += `<td class="num clickable" data-e="${b.id}" data-f="${from}" data-t="${to}">${fmt(b.total)}</td><td class="num">${b.nd}</td><td class="num ${low ? 'below-avg' : ''}">${Math.round(b.avg)}${low ? ' ↓' : ''}</td></tr>`;
+    dates.forEach(d => { const v = cellVal(b, d); h += v !== '' ? `<td class="num clickable" data-e="${b.id}" data-f="${d}" data-t="${d}">${typeof v === 'number' ? fmt(v) : v}</td>` : '<td class="num"></td>'; });
+    h += `<td class="num clickable" data-e="${b.id}" data-f="${from}" data-t="${to}">${fmt(b.pcs)}</td><td class="num">${b.nod ? fmt(b.ord) : '—'}</td><td class="num">${b.ppo ? b.ppo.toFixed(1) : '—'}</td>
+      <td class="num">${b.nd}</td><td class="num ${low ? 'below-avg' : ''}">${a == null ? '—' : (met === 'orders' ? a.toFixed(1) : Math.round(a))}${low ? ' ↓' : ''}</td></tr>`;
   });
   h += '</tbody></table>';
   $('ovTable').innerHTML = h;
+}
+
+function exportOverview() {
+  if (!ovTable) { toast('没有数据可导出 Nothing to export'); return; }
+  const T = ovTable;
+  const aoa = [
+    [`产量 Output · ${CAT_LABEL[T.cat]} · ${T.from}${T.from !== T.to ? ' ~ ' + T.to : ''} · 日期列为${MET_LABEL[T.met]}`],
+    ['发货员 Packer', ...T.dates, '件数合计 Total pcs', '单数合计 Total orders', '件/单 Pcs/order', '天数 Days', `日均 Avg/day (${MET_LABEL[T.met]})`],
+    ...T.rows.map(r => [r.name, ...r.cells.map(v => v === '' ? null : v), r.pcs, r.ord, r.ppo ? +r.ppo.toFixed(2) : null, r.nd, r.avg == null ? null : +r.avg.toFixed(2)]),
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(aoa), wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Output');
+  const blob = new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `Output_${T.cat}_${T.from}_${T.to}.xlsx`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
 
 async function showSkuDetail(ev, empId, from, to, cat) {
@@ -947,13 +1033,22 @@ async function refreshWeight() {
   loaded();
 }
 
+const REASONS = {
+  pack_error: '打包错误 Packing error', unit_wrong: 'SKU单重不对 Wrong unit weight',
+  packaging: '包材多 Extra packaging', scale_error: '称重失误 Weighing error', other: '其他 Other',
+};
+// 计入发货员的异常：重量异常，且没有被核查为"非打包原因"
+const isFault = o => o.st === 'error' && !(o.ck && o.rs && o.rs !== 'pack_error');
+const excluder = () => CORE.makeExcluder(settings.weight_exclude);
+
 function computeWeight() {
-  const pct = Number($('wPct').value) || 0, g = Number($('wG').value) || 0;
-  return wData.map(o => ({ ...o, ...CORE.weightStatus(o, pct, g) }));
+  const pct = Number($('wPct').value) || 0, g = Number($('wG').value) || 0, isEx = excluder();
+  return wData.map(o => ({ ...o, ...CORE.weightStatus(o, pct, g), ex: o.it.some(i => isEx(i[0])) }));
 }
 
-function filteredWeight(all) {
-  let list = wFilter === 'all' ? all : all.filter(o => o.st === wFilter);
+function filteredWeight(allW) {
+  let list = wFilter === 'excluded' ? allW.filter(o => o.ex) : allW.filter(o => !o.ex);
+  if (wFilter !== 'all' && wFilter !== 'excluded') list = list.filter(o => o.st === wFilter);
   if ($('wUnchecked').checked) list = list.filter(o => o.st === 'ok' || !o.ck);
   const k = $('wSku').value.trim().toUpperCase();
   if (k) list = list.filter(o => o.no.toUpperCase().includes(k) || String(o.pn || '').toUpperCase().includes(k) || (o.tr || '').toUpperCase().includes(k) || o.it.some(i => String(i[0]).toUpperCase().includes(k)));
@@ -961,37 +1056,47 @@ function filteredWeight(all) {
 }
 
 function renderWeight() {
-  const all = computeWeight();
+  const allW = computeWeight();
+  const all = allW.filter(o => !o.ex), exN = allW.length - all.length;
   const c = st => all.filter(o => o.st === st).length;
   const unck = st => all.filter(o => o.st === st && !o.ck).length;
   const box = (key, label, n, cls, sub) => `<div class="stat-box click ${cls} ${wFilter === key ? 'sel' : ''}" data-wf="${key}"><div class="stat-label">${label}</div><div class="stat-value">${n}</div>${sub ? `<div class="stat-sub">${sub}</div>` : ''}</div>`;
   const subU = st => c(st) ? `未核查 Unchecked ${unck(st)}` : '';
   $('wStats').innerHTML = box('all', '全部包裹 Parcels', all.length, '') + box('error', '重量异常 Anomaly', c('error'), 'c-red', subU('error')) +
-    box('noscale', '秤未捕获 No scale', c('noscale'), 'c-orange', subU('noscale')) + box('missing', '单重缺失 No unit wt', c('missing'), 'c-purple', subU('missing')) + box('ok', '正常 OK', c('ok'), 'c-green');
-  const list = filteredWeight(all);
+    box('noscale', '秤未捕获 No scale', c('noscale'), 'c-orange', subU('noscale')) + box('missing', '单重缺失 No unit wt', c('missing'), 'c-purple', subU('missing')) + box('ok', '正常 OK', c('ok'), 'c-green') +
+    box('excluded', '已排除 Excluded', exN, '', exN ? '不参与校验 Not checked' : '');
+  const list = filteredWeight(allW);
   $('wCount').textContent = `${list.length} 个包裹 parcels`;
   if (!list.length) { $('wTable').innerHTML = '<p class="empty">没有订单 No orders</p>'; }
   else {
     $('wTable').innerHTML = `<table class="tbl"><thead><tr><th>发货时间<br><span class="en">Time</span></th><th>平台交易号<br><span class="en">Order ID</span></th><th>快递单号<br><span class="en">Tracking</span></th><th>发货员<br><span class="en">Packer</span></th><th>SKU × 数量<br><span class="en">SKU × Qty</span></th><th class="num">件数<br><span class="en">Pcs</span></th><th class="num">理论(g)<br><span class="en">Expected</span></th><th class="num">实称(g)<br><span class="en">Actual</span></th><th class="num">偏差<br><span class="en">Diff</span></th><th>状态<br><span class="en">Status</span></th></tr></thead><tbody>
     ${list.slice(0, 2000).map(o => {
-      const cls = { error: 'row-error', noscale: 'row-warn', missing: 'row-miss', ok: 'row-ok' }[o.st];
-      const badge = { error: `<span class="badge badge-red">异常 Anomaly</span><br><small class="muted">${o.diff > 0 ? '超重 Over' : '偏轻 Under'}</small>`, noscale: '<span class="badge badge-orange">秤未捕获 No scale</span>', missing: '<span class="badge badge-purple">单重缺失 No unit wt</span>', ok: '<span class="badge badge-ok">正常 OK</span>' }[o.st];
+      const cls = o.ex ? '' : { error: 'row-error', noscale: 'row-warn', missing: 'row-miss', ok: 'row-ok' }[o.st];
+      const badge = o.ex ? '<span class="badge badge-gray">已排除 Excluded</span>' : { error: `<span class="badge badge-red">异常 Anomaly</span><br><small class="muted">${o.diff > 0 ? '超重 Over' : '偏轻 Under'}</small>`, noscale: '<span class="badge badge-orange">秤未捕获 No scale</span>', missing: '<span class="badge badge-purple">单重缺失 No unit wt</span>', ok: '<span class="badge badge-ok">正常 OK</span>' }[o.st];
       const dev = o.dp == null ? '—' : `${o.diff > 0 ? '+' : ''}${fmt(o.diff)}g<br><small>${o.dp > 0 ? '+' : ''}${o.dp.toFixed(1)}%</small>`;
       return `<tr class="${cls}"><td class="muted">${esc(String(o.t || '').slice(5, 16).replace('T', ' '))}</td>
         <td class="mono">${esc(o.pn)} <button class="cp" data-cp="${esc(o.pn)}" title="复制 Copy">⧉</button>${o.ps > 1 ? `<br><span class="badge badge-gray">拆单 Split ${o.pi}/${o.ps}</span>` : ''}</td>
         <td class="mono">${o.tr ? `${esc(o.tr)} <button class="cp" data-cp="${esc(o.tr)}" title="复制 Copy">⧉</button>` : ''}</td><td>${esc(o.e ? empName(o.e) : o.pr)}</td>
         <td class="wrap">${o.it.map(i => `${esc(i[0])} <button class="cp" data-cp="${esc(i[0])}" title="复制 Copy">⧉</button> ×${i[1]}${i[2] <= 1 ? ' <span style="color:var(--purple)">(单重 unit ' + i[2] + 'g)</span>' : ''}`).join('<br>')}</td>
         <td class="num">${o.q}</td><td class="num">${fmt(o.tw)}</td><td class="num">${fmt(o.aw)}</td>
-        <td class="num ${o.st === 'error' ? 'dev-pos' : 'dev-ok'}">${dev}</td><td>${badge}${o.st === 'ok' ? '' : checkCell(o)}</td></tr>`;
+        <td class="num ${o.st === 'error' && !o.ex ? 'dev-pos' : 'dev-ok'}">${dev}</td><td>${badge}${o.st === 'ok' || o.ex ? '' : checkCell(o)}</td></tr>`;
     }).join('')}</tbody></table>${list.length > 2000 ? '<p class="muted" style="padding:8px">只显示前 2000 单，请缩小范围 Showing first 2000, narrow the range</p>' : ''}`;
   }
-  // by packer
+  // by packer（不含已排除；已核查为非打包原因的不计入异常率）
   const by = {};
-  all.forEach(o => { const k = o.e || 'raw:' + o.pr; const b = by[k] = by[k] || { name: o.e ? empName(o.e) : o.pr, n: 0, err: 0, checked: 0 }; b.n++; if (o.st === 'error' || o.st === 'ok') b.checked++; if (o.st === 'error') b.err++; });
-  const bl = Object.values(by).sort((a, b) => b.err - a.err || b.n - a.n);
-  $('wByEmp').innerHTML = bl.length ? `<table class="tbl"><thead><tr><th>发货员 Packer</th><th class="num">单数 Orders</th><th class="num">可校验 Checked</th><th class="num">异常 Anomaly</th><th class="num">异常率 Rate</th></tr></thead><tbody>
-    ${bl.map(b => `<tr><td>${esc(b.name)}</td><td class="num">${b.n}</td><td class="num">${b.checked}</td><td class="num ${b.err ? 'below-avg' : ''}">${b.err}</td><td class="num">${b.checked ? (b.err / b.checked * 100).toFixed(1) + '%' : '—'}</td></tr>`).join('')}</tbody></table>` : '<p class="empty">—</p>';
-  // missing unit weight SKUs
+  all.forEach(o => {
+    const k = o.e || 'raw:' + o.pr;
+    const b = by[k] = by[k] || { name: o.e ? empName(o.e) : o.pr, n: 0, chk: 0, err: 0, fault: 0, confirmed: 0, pending: 0 };
+    b.n++; if (o.st === 'error' || o.st === 'ok') b.chk++;
+    if (o.st === 'error') { b.err++; if (!o.ck) b.pending++; }
+    if (isFault(o)) b.fault++;
+    if (o.st === 'error' && o.ck && o.rs === 'pack_error') b.confirmed++;
+  });
+  const bl = Object.values(by).sort((a, b) => b.fault - a.fault || b.n - a.n);
+  $('wByEmp').innerHTML = bl.length ? `<table class="tbl"><thead><tr><th>发货员<br><span class="en">Packer</span></th><th class="num">包裹<br><span class="en">Parcels</span></th><th class="num">可校验<br><span class="en">Checkable</span></th><th class="num">异常<br><span class="en">Anomaly</span></th><th class="num">确认打包错误<br><span class="en">Packing error</span></th><th class="num">待核查<br><span class="en">Pending</span></th><th class="num">异常率*<br><span class="en">Rate*</span></th></tr></thead><tbody>
+    ${bl.map(b => `<tr><td>${esc(b.name)}</td><td class="num">${b.n}</td><td class="num">${b.chk}</td><td class="num">${b.err}</td><td class="num ${b.confirmed ? 'below-avg' : ''}">${b.confirmed}</td><td class="num">${b.pending || ''}</td><td class="num ${b.fault ? 'below-avg' : ''}">${b.chk ? (b.fault / b.chk * 100).toFixed(1) + '%' : '—'}</td></tr>`).join('')}</tbody></table>
+    <p class="muted" style="margin-top:8px">* 已核查为"单重不对 / 包材多 / 称重失误 / 其他"的不算发货员的错 · Anomalies checked as not a packing error are not counted</p>` : '<p class="empty">—</p>';
+  // missing unit weight SKUs（不含已排除）
   const miss = {};
   all.forEach(o => o.it.forEach(i => { if (i[2] <= 1) { const k = String(i[0]).toUpperCase(); miss[k] = miss[k] || { sku: i[0], orders: 0 }; miss[k].orders++; } }));
   const ml = Object.values(miss).sort((a, b) => b.orders - a.orders);
@@ -1000,6 +1105,8 @@ function renderWeight() {
 
 let calibRows = [];
 function renderCalib(rows) {
+  const isEx = excluder();
+  rows = rows.filter(r => !isEx(r.sku));
   calibRows = rows;
   $('wCalib').innerHTML = rows.length ? `<table class="tbl"><thead><tr><th>SKU
       <button class="btn btn-ghost btn-sm" data-calib-copy="sku" style="margin-left:8px">⧉ 复制全部SKU Copy SKUs</button>
@@ -1017,8 +1124,8 @@ function copyCalib(mode) {
 
 // 复制平台单号（拆单的同一平台单号只复制一次）；勾了"只看未核查"时异常单也只复制未核查的
 function copyWeight(onlyErr) {
-  const all = computeWeight();
-  let list = onlyErr ? all.filter(o => o.st === 'error') : filteredWeight(all);
+  const allW = computeWeight();
+  let list = onlyErr ? allW.filter(o => o.st === 'error' && !o.ex) : filteredWeight(allW);
   if (onlyErr && $('wUnchecked').checked) list = list.filter(o => !o.ck);
   const ids = [...new Set(list.map(o => o.pn))];
   if (!ids.length) { toast('没有可复制的单号 Nothing to copy'); return; }
@@ -1035,13 +1142,24 @@ function copyListedSkus() {
 const fmtTs = ts => { if (!ts) return ''; const d = new Date(ts); return `${CORE.ymd(d).slice(5)} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 function checkCell(o) {
   return o.ck
-    ? `<div class="muted" style="margin-top:4px">✓ 已核查 Checked · <b>${esc(o.ck)}</b> ${fmtTs(o.ca)} <button class="cp" data-uncheck="${esc(o.no)}" title="撤销 Undo">↺</button></div>`
+    ? `<div class="muted" style="margin-top:4px">✓ 已核查 Checked · <b>${esc(o.ck)}</b> ${fmtTs(o.ca)} <button class="cp" data-uncheck="${esc(o.no)}" title="撤销 Undo">↺</button>${o.rs ? `<br><span class="badge ${o.rs === 'pack_error' ? 'badge-red' : 'badge-gray'}">${REASONS[o.rs] || esc(o.rs)}</span>` : ''}</div>`
     : `<div style="margin-top:4px"><button class="btn btn-ghost btn-sm" data-check="${esc(o.no)}">✓ 已核查 Mark checked</button></div>`;
 }
-async function setChecked(no, checked) {
+function askCheck(no) {
+  const o = wData.find(x => x.no === no);
+  modal(`<h2>核查原因 Check reason</h2>
+    <p class="muted" style="margin-bottom:10px">${esc(o ? o.pn : no)} · ${esc(o && o.tr ? o.tr : '')}</p>
+    ${Object.entries(REASONS).map(([k, v], i) => `<label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer"><input type="radio" name="ckr" value="${k}" ${i === 0 ? 'checked' : ''}> ${v}</label>`).join('')}
+    <div class="field" style="margin-top:10px"><label>备注（可选）Note (optional)</label><input id="ckNote" placeholder="例如：箱子换大了 e.g. bigger box"></div>
+    <p class="muted">只有"打包错误"会算进发货员的异常率 · Only "Packing error" counts against the packer</p>`, async ov => {
+    const r = ov.querySelector('input[name="ckr"]:checked').value;
+    await setChecked(no, true, r, ov.querySelector('#ckNote').value);
+  });
+}
+async function setChecked(no, checked, reason, note) {
   try {
-    const r = await rpc('wh_set_checked', { p_order: no, p_checked: checked, p_note: null });
-    const o = wData.find(x => x.no === no); if (o) { o.ck = r.ck; o.ca = r.ca; }
+    const r = await rpc('wh_set_checked', { p_order: no, p_checked: checked, p_reason: reason || null, p_note: note || null });
+    const o = wData.find(x => x.no === no); if (o) { o.ck = r.ck; o.ca = r.ca; o.rs = r.rs; }
     renderWeight(); loadCheckLog();
     toast(checked ? '✅ 已标记核查 Marked checked' : '已撤销 Undone', 1500);
   } catch (e) { toast('❌ ' + e.message); }
@@ -1049,8 +1167,8 @@ async function setChecked(no, checked) {
 async function loadCheckLog() {
   try {
     const rows = await rpc('wh_check_log_list', { p_from: $('wFrom').value, p_to: $('wTo').value });
-    $('wLog').innerHTML = rows.length ? `<table class="tbl"><thead><tr><th>时间 Time</th><th>核查人 By</th><th>操作 Action</th><th>平台交易号 Order ID</th><th>快递单号 Tracking</th><th class="num">理论 Expected(g)</th><th class="num">实称 Actual(g)</th></tr></thead><tbody>
-      ${rows.map(l => `<tr><td class="muted">${fmtTs(l.at)}</td><td><b>${esc(l.u)}</b></td><td>${l.a === 'check' ? '✓ 已核查 Checked' : '↺ 撤销 Undone'}</td><td class="mono">${esc(l.pn || '')}</td><td class="mono">${esc(l.no)}</td><td class="num">${fmt(l.tw)}</td><td class="num">${fmt(l.aw)}</td></tr>`).join('')}</tbody></table>`
+    $('wLog').innerHTML = rows.length ? `<table class="tbl"><thead><tr><th>时间 Time</th><th>核查人 By</th><th>操作 Action</th><th>原因 Reason</th><th>备注 Note</th><th>平台交易号 Order ID</th><th>快递单号 Tracking</th><th class="num">理论 Expected(g)</th><th class="num">实称 Actual(g)</th></tr></thead><tbody>
+      ${rows.map(l => `<tr><td class="muted">${fmtTs(l.at)}</td><td><b>${esc(l.u)}</b></td><td>${l.a === 'check' ? '✓ 已核查 Checked' : '↺ 撤销 Undone'}</td><td>${l.rs ? (REASONS[l.rs] || esc(l.rs)) : ''}</td><td class="wrap">${esc(l.note || '')}</td><td class="mono">${esc(l.pn || '')}</td><td class="mono">${esc(l.no)}</td><td class="num">${fmt(l.tw)}</td><td class="num">${fmt(l.aw)}</td></tr>`).join('')}</tbody></table>`
       : '<p class="empty">还没有核查记录 No checks yet</p>';
   } catch (e) { $('wLog').innerHTML = `<p class="empty">❌ ${esc(e.message)}</p>`; }
 }
@@ -1072,28 +1190,35 @@ async function refreshPerson() {
       rpc('wh_weight_orders', { p_from: mFrom, p_to: mTo, p_emp: emp }),
     ]);
     const mine = out.filter(r => r.e === emp);
-    const sum = (f, a, b) => mine.filter(r => r.d >= a && r.d <= b).reduce((s, r) => s + f(r), 0);
-    const db = r => +r.db, ot = r => +r.ot, all = r => +r.db + +r.ot;
-    const mRows = mine.filter(r => r.d >= mFrom && r.d <= mTo && all(r) > 0);
-    const mDays = new Set(mRows.map(r => r.d)).size;
-    const pct = settings.tol_pct, g = settings.tol_g;
-    const ws = wo.map(o => CORE.weightStatus(o, pct, g).st);
-    const checked = ws.filter(s => s === 'error' || s === 'ok').length, errs = ws.filter(s => s === 'error').length;
-    const mTotal = sum(all, mFrom, mTo);
+    const inR = (r, a, b) => r.d >= a && r.d <= b;
+    const sum = (f, a, b) => mine.filter(r => inR(r, a, b)).reduce((s, r) => s + (f(r) || 0), 0);
+    const db = r => +r.db, ot = r => +r.ot, all = r => +r.db + +r.ot, ord = r => (r.o == null ? 0 : +r.o);
+    const mRows = mine.filter(r => inR(r, mFrom, mTo) && all(r) > 0);
+    const mDays = new Set(mRows.map(r => r.d)).size, mOrdDays = new Set(mRows.filter(r => r.o != null).map(r => r.d)).size;
+    // 称重：不含已排除；已核查为非打包原因的不算
+    const pct = settings.tol_pct, g = settings.tol_g, isEx = excluder();
+    const wc = wo.filter(o => !o.it.some(i => isEx(i[0]))).map(o => ({ ...o, ...CORE.weightStatus(o, pct, g) }));
+    const checkable = wc.filter(o => o.st === 'error' || o.st === 'ok').length;
+    const faults = wc.filter(isFault).length, errs = wc.filter(o => o.st === 'error').length;
+    const mTotal = sum(all, mFrom, mTo), mOrd = sum(ord, mFrom, mTo);
+    const line = (a, b) => `哑铃 Dumbbell ${fmt(sum(db, a, b))} · 其他 Other ${fmt(sum(ot, a, b))} · ${fmt(sum(ord, a, b))} 单 orders`;
     $('pStats').innerHTML = `
-      <div class="stat-box"><div class="stat-label">今日 Today</div><div class="stat-value" style="color:var(--blue)">${fmt(sum(all, t, t))}</div><div class="stat-sub">哑铃 Dumbbell ${fmt(sum(db, t, t))} · 其他 Other ${fmt(sum(ot, t, t))}</div></div>
-      <div class="stat-box"><div class="stat-label">本周 Week (Mon–Sun)</div><div class="stat-value">${fmt(sum(all, wk, t))}</div><div class="stat-sub">哑铃 Dumbbell ${fmt(sum(db, wk, t))} · 其他 Other ${fmt(sum(ot, wk, t))}</div></div>
-      <div class="stat-box"><div class="stat-label">${m} 月合计 Month total</div><div class="stat-value">${fmt(mTotal)}</div><div class="stat-sub">哑铃 Dumbbell ${fmt(sum(db, mFrom, mTo))} · 其他 Other ${fmt(sum(ot, mFrom, mTo))}</div></div>
-      <div class="stat-box"><div class="stat-label">${m} 出勤天数 Days worked</div><div class="stat-value">${mDays}</div><div class="stat-sub">日均 Avg/day ${mDays ? Math.round(mTotal / mDays) : 0}</div></div>
-      <div class="stat-box ${errs ? 'c-red' : ''}"><div class="stat-label">${m} 称重异常 Weight anomalies</div><div class="stat-value">${errs}</div><div class="stat-sub">可校验 Checked ${checked} · 异常率 Rate ${checked ? (errs / checked * 100).toFixed(1) + '%' : '—'}</div></div>`;
-    const errByDay = {}, ordByDay = {};
-    wo.forEach((o, i) => { const d = String(o.t).slice(0, 10); ordByDay[d] = (ordByDay[d] || 0) + 1; if (ws[i] === 'error') errByDay[d] = (errByDay[d] || 0) + 1; });
+      <div class="stat-box"><div class="stat-label">今日件数 Today pcs</div><div class="stat-value" style="color:var(--blue)">${fmt(sum(all, t, t))}</div><div class="stat-sub">${line(t, t)}</div></div>
+      <div class="stat-box"><div class="stat-label">本周件数 Week pcs (Mon–Sun)</div><div class="stat-value">${fmt(sum(all, wk, t))}</div><div class="stat-sub">${line(wk, t)}</div></div>
+      <div class="stat-box"><div class="stat-label">${m} 月件数 Month pcs</div><div class="stat-value">${fmt(mTotal)}</div><div class="stat-sub">${line(mFrom, mTo)}</div></div>
+      <div class="stat-box"><div class="stat-label">${m} 出勤天数 Days worked</div><div class="stat-value">${mDays}</div><div class="stat-sub">日均 Avg/day ${mDays ? Math.round(mTotal / mDays) : 0} 件 pcs · ${mOrdDays ? (mOrd / mOrdDays).toFixed(1) : '—'} 单 orders</div></div>
+      <div class="stat-box ${faults ? 'c-red' : ''}"><div class="stat-label">${m} 称重异常 Weight anomalies*</div><div class="stat-value">${faults}</div><div class="stat-sub">全部异常 All ${errs} · 可校验 Checkable ${checkable} · 异常率 Rate ${checkable ? (faults / checkable * 100).toFixed(1) + '%' : '—'}</div></div>`;
+    const errByDay = {};
+    wc.forEach(o => { if (isFault(o)) { const d = String(o.t).slice(0, 10); errByDay[d] = (errByDay[d] || 0) + 1; } });
     const daysList = [...new Set(mRows.map(r => r.d))].sort().reverse();
-    $('pTable').innerHTML = daysList.length ? `<table class="tbl"><thead><tr><th>日期 Date</th><th class="num">🏋️ 哑铃 Dumbbell</th><th class="num">📦 其他 Other</th><th class="num">合计 Total</th><th class="num">订单数 Orders</th><th class="num">称重异常 Anomalies</th></tr></thead><tbody>
-      ${daysList.map(d => { const rs = mRows.filter(r => r.d === d); const a = rs.reduce((s, r) => s + db(r), 0), b = rs.reduce((s, r) => s + ot(r), 0);
-        return `<tr><td>${d}</td><td class="num ${a ? 'clickable' : ''}" data-e="${emp}" data-f="${d}" data-t="${d}" data-c="dumbbell">${a || ''}</td><td class="num ${b ? 'clickable' : ''}" data-e="${emp}" data-f="${d}" data-t="${d}" data-c="other">${b || ''}</td>
-        <td class="num clickable" data-e="${emp}" data-f="${d}" data-t="${d}" data-c="all">${a + b}</td><td class="num">${ordByDay[d] || (d < (settings.cutover_date || '') ? '旧 old' : '')}</td><td class="num ${errByDay[d] ? 'below-avg' : ''}">${errByDay[d] || ''}</td></tr>`; }).join('')}
-      </tbody></table>` : '<p class="empty">这个月没有数据 No data this month</p>';
+    const td = (v, d, c) => `<td class="num ${v ? 'clickable' : ''}" data-e="${emp}" data-f="${d}" data-t="${d}" data-c="${c}">${v || ''}</td>`;
+    $('pTable').innerHTML = daysList.length ? `<table class="tbl"><thead><tr><th>日期<br><span class="en">Date</span></th><th class="num">🏋️ 哑铃件<br><span class="en">Dumbbell pcs</span></th><th class="num">哑铃单<br><span class="en">Dumbbell orders</span></th><th class="num">📦 其他件<br><span class="en">Other pcs</span></th><th class="num">其他单<br><span class="en">Other orders</span></th><th class="num">合计件<br><span class="en">Total pcs</span></th><th class="num">合计单<br><span class="en">Total orders</span></th><th class="num">称重异常*<br><span class="en">Anomalies*</span></th></tr></thead><tbody>
+      ${daysList.map(d => {
+        const rs = mRows.filter(r => r.d === d), old = rs.every(r => r.o == null);
+        const s = f => rs.reduce((x, r) => x + (f(r) || 0), 0);
+        const a = s(db), b = s(ot), od = old ? '旧 old' : s(r => +r.do), oo = old ? '' : s(r => +r.oo), oa = old ? '' : s(ord);
+        return `<tr><td>${d}</td>${td(a, d, 'dumbbell')}<td class="num">${od || ''}</td>${td(b, d, 'other')}<td class="num">${oo || ''}</td>${td(a + b, d, 'all')}<td class="num"><b>${oa || ''}</b></td><td class="num ${errByDay[d] ? 'below-avg' : ''}">${errByDay[d] || ''}</td></tr>`; }).join('')}
+      </tbody></table><p class="muted" style="margin-top:8px">* 不含称重排除的SKU；已核查为非打包原因的不算 · Excludes excluded SKUs and anomalies checked as not a packing error</p>` : '<p class="empty">这个月没有数据 No data this month</p>';
   } catch (e) { toast('❌ ' + e.message); }
   loaded();
 }
@@ -1107,7 +1232,7 @@ function switchAdminTab(v) {
   if (v === 'acc') loadAccounts();
   if (v === 'emp') renderEmpAdmin();
   if (v === 'sku') loadSkuAdmin();
-  if (v === 'set') { $('setCut').value = settings.cutover_date || ''; $('setPct').value = settings.tol_pct; $('setG').value = settings.tol_g; }
+  if (v === 'set') { $('setCut').value = settings.cutover_date || ''; $('setPct').value = settings.tol_pct; $('setG').value = settings.tol_g; $('setExclude').value = (settings.weight_exclude || []).join('\n'); }
 }
 
 // ---- accounts ----
@@ -1182,9 +1307,10 @@ async function loadSkuAdmin() {
 function renderSkuAdmin() {
   const k = $('skuSearch').value.trim().toUpperCase();
   const list = k ? skuRows.filter(r => r.sku.includes(k)) : skuRows;
-  $('skuList').innerHTML = list.length ? `<table class="tbl"><thead><tr><th>SKU</th><th class="num">单重 Unit(g)</th><th class="num">近90天件数 Pcs (90d)</th><th>当前归类 Category</th><th>来源 Source</th><th></th></tr></thead><tbody>
+  const isEx = excluder();
+  $('skuList').innerHTML = list.length ? `<table class="tbl"><thead><tr><th>SKU</th><th class="num">单重 Unit(g)</th><th class="num">近90天件数 Pcs (90d)</th><th>当前归类 Category</th><th>来源 Source</th><th>称重 Weight check</th><th></th></tr></thead><tbody>
     ${list.slice(0, 500).map(r => `<tr><td class="mono">${esc(r.sku)}</td><td class="num">${fmt(r.uw)}</td><td class="num">${fmt(r.n)}</td>
-      <td>${r.db ? '🏋️ 哑铃 Dumbbell' : '📦 其他 Other'}</td><td class="muted">${r.ov ? '手动 Manual' : '规则 Rule'}</td>
+      <td>${r.db ? '🏋️ 哑铃 Dumbbell' : '📦 其他 Other'}</td><td class="muted">${r.ov ? '手动 Manual' : '规则 Rule'}</td><td>${isEx(r.sku) ? '<span class="badge badge-gray">⛔ 已排除 Excluded</span>' : ''}</td>
       <td><button class="btn btn-ghost btn-sm" data-sku="${esc(r.sku)}" data-cat="${r.db ? 'other' : 'dumbbell'}">改为 → ${r.db ? '其他 Other' : '哑铃 Dumbbell'}</button>
       ${r.ov ? `<button class="btn btn-ghost btn-sm" data-sku="${esc(r.sku)}" data-cat="">恢复规则 Use rule</button>` : ''}</td></tr>`).join('')}
     </tbody></table>` : '<p class="empty">还没有导入数据 No imported data yet</p>';
@@ -1226,6 +1352,8 @@ function wire() {
   // overview
   bindSeg('ovPeriod', v => { $('ovCustom').classList.toggle('hidden', v !== 'custom'); if (v !== 'custom') refreshOverview(); });
   bindSeg('ovCat', () => { if (ovData) renderOverview(); });
+  bindSeg('ovMetric', () => { if (ovData) renderOverview(); });
+  $('ovExport').onclick = exportOverview;
   $('ovGo').onclick = refreshOverview;
   $('ovTable').addEventListener('click', e => {
     const p = e.target.closest('[data-person]');
@@ -1242,7 +1370,7 @@ function wire() {
   $('wStats').addEventListener('click', e => { const b = e.target.closest('[data-wf]'); if (b) { wFilter = wFilter === b.dataset.wf ? 'all' : b.dataset.wf; renderWeight(); } });
   $('wTable').addEventListener('click', e => {
     const b = e.target.closest('[data-cp]'); if (b) { copyText(b.dataset.cp).then(() => toast('已复制 Copied ' + b.dataset.cp, 1200)); return; }
-    const c = e.target.closest('[data-check]'); if (c) { setChecked(c.dataset.check, true); return; }
+    const c = e.target.closest('[data-check]'); if (c) { askCheck(c.dataset.check); return; }
     const u = e.target.closest('[data-uncheck]'); if (u && confirm('撤销核查？Undo check?')) setChecked(u.dataset.uncheck, false);
   });
   $('wUnchecked').addEventListener('change', renderWeight);
@@ -1309,6 +1437,10 @@ function wire() {
     const v = $('setCut').value; if (!v) return;
     if (!confirm(`切换日改为 ${v}？Change cutover to ${v}?\n${v} 之前读旧手工数据，之后读导入数据。`)) return;
     try { await saveSetting('cutover_date', v); toast('✅ 已保存 Saved'); } catch (e) { toast('❌ ' + e.message); }
+  };
+  $('setExcludeGo').onclick = async () => {
+    const list = [...new Set($('setExclude').value.split(/\r?\n/).map(x => x.trim().toUpperCase()).filter(Boolean))];
+    try { await saveSetting('weight_exclude', list); $('setExclude').value = list.join('\n'); toast(`✅ 已保存 ${list.length} 条 Saved ${list.length}`); } catch (e) { toast('❌ ' + e.message); }
   };
   $('setTolGo').onclick = async () => {
     try { await saveSetting('tol_pct', Number($('setPct').value)); await saveSetting('tol_g', Number($('setG').value)); $('wPct').value = settings.tol_pct; $('wG').value = settings.tol_g; toast('✅ 已保存 Saved'); } catch (e) { toast('❌ ' + e.message); }
