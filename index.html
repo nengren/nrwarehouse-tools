@@ -139,6 +139,24 @@ tr.row-ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .cal-day.zero{background:var(--red-light);border-color:var(--red)}.cal-day.zero .n{color:var(--red);font-size:13px}
 .cal-day.old{background:var(--border-light);color:var(--text3)}
 .cal-day.today{outline:2px solid var(--blue)}
+.zh{display:block;font-size:11px;font-weight:400;color:var(--text3);line-height:1.3}
+.seg2 button{line-height:1.2;padding:5px 14px}.seg2 button .zh{font-size:10px}
+.btn .zh{display:block;font-size:10px;font-weight:400;opacity:.8;line-height:1.1}
+.btn:has(.zh){flex-direction:column;gap:0;padding-top:5px;padding-bottom:5px}
+.lbl2{font-size:12px;color:var(--text2);font-weight:600;line-height:1.2}.lbl2 .zh{font-size:10px}
+.stat-label .zh{display:inline;margin-left:6px}
+.tbl.ov th{vertical-align:bottom}
+.tbl.ov tr.grp th{border-bottom:none;padding-bottom:0;font-size:13px;color:var(--text)}
+.tbl.ov tr.grp th.g{text-align:center;border-bottom:2px solid var(--border)}
+.tbl.ov tr.grp th .zh{display:inline;margin-left:4px}
+.tbl.ov th.sortable{cursor:pointer;user-select:none}.tbl.ov th.sortable:hover{color:var(--blue)}
+.tbl.ov th.sorted{color:var(--blue)}
+.tbl.ov td:nth-child(3),.tbl.ov td:nth-child(5),.tbl.ov th:nth-child(3),.tbl.ov th:nth-child(5){border-right:1px solid var(--border-light)}
+.tbl.ov td.barcell{min-width:150px}
+.bar{height:6px;background:var(--border-light);border-radius:3px;margin-top:4px}.bar i{display:block;height:100%;background:var(--blue);border-radius:3px}
+.tbl.ov tr.total td{font-weight:700;border-top:2px solid var(--border);background:#fafafa}
+.tbl.ov tr.helper td{color:var(--text2);background:#fcfcfd}
+.tbl.ov tr.helper-toggle td{padding:10px;font-size:13px}
 .row-flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:1000px){.two-col{grid-template-columns:1fr}}
@@ -187,12 +205,12 @@ tr.row-ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
   <div class="sidebar">
     <div class="sidebar-logo">📦 NR 仓库工具<small>Warehouse Tools</small></div>
     <div class="sidebar-nav">
-      <div class="nav-item" data-page="pageImport"><span class="icon">📥</span>导入 Import</div>
-      <div class="nav-item" data-page="pageOverview"><span class="icon">📊</span>产量总览 Output</div>
-      <div class="nav-item" data-page="pageWeight"><span class="icon">⚖️</span>称重校验 Weight</div>
-      <div class="nav-item" data-page="pagePerson"><span class="icon">👤</span>个人 Personal</div>
-      <div class="nav-item admin-only" data-page="pageAdmin"><span class="icon">⚙️</span>管理 Admin</div>
-      <div class="nav-item hidden" id="navLabel" data-page="pageLabel"><span class="icon">🏷️</span>面单重量 Label</div>
+      <div class="nav-item" data-page="pageImport"><span class="icon">📥</span><span>Import<span class="zh">导入</span></span></div>
+      <div class="nav-item" data-page="pageOverview"><span class="icon">📊</span><span>Output<span class="zh">产量</span></span></div>
+      <div class="nav-item" data-page="pageWeight"><span class="icon">⚖️</span><span>Weight check<span class="zh">称重校验</span></span></div>
+      <div class="nav-item" data-page="pagePerson"><span class="icon">👤</span><span>Personal<span class="zh">个人</span></span></div>
+      <div class="nav-item admin-only" data-page="pageAdmin"><span class="icon">⚙️</span><span>Admin<span class="zh">管理</span></span></div>
+      <div class="nav-item hidden" id="navLabel" data-page="pageLabel"><span class="icon">🏷️</span><span>Label weight<span class="zh">面单重量</span></span></div>
     </div>
     <div class="sidebar-footer">
       <div class="user-name" id="sidebarUser">-</div>
@@ -221,38 +239,23 @@ tr.row-ok td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 
     <!-- ===== OVERVIEW ===== -->
     <div class="page" id="pageOverview">
-      <div class="page-title">📊 产量总览 <small>Output by packer</small></div>
+      <div class="page-title">📊 Output <small>产量</small></div>
       <div class="filter-bar">
-        <div class="seg" id="ovPeriod">
-          <button data-v="day" class="active">今日 Today</button>
-          <button data-v="yday">昨日 Yesterday</button>
-          <button data-v="week">本周 Week</button>
-          <button data-v="lweek">上周 Last wk</button>
-          <button data-v="month">本月 Month</button>
-          <button data-v="lmonth">上月 Last mo</button>
-          <button data-v="custom">自定义 Custom</button>
+        <div class="seg seg2" id="ovPeriod">
+          <button data-v="day" class="active">Today<span class="zh">今天</span></button>
+          <button data-v="yday">Yesterday<span class="zh">昨天</span></button>
+          <button data-v="week">This week<span class="zh">本周（周一起）</span></button>
+          <button data-v="month">This month<span class="zh">本月</span></button>
         </div>
-        <span id="ovCustom" class="row-flex hidden">
-          <input type="date" class="input" id="ovFrom"> — <input type="date" class="input" id="ovTo">
-          <button class="btn btn-primary btn-sm" id="ovGo">查询 Load</button>
-        </span>
-      </div>
-      <div class="filter-bar">
-        <div class="seg" id="ovCat">
-          <button data-v="dumbbell" class="active">🏋️ 哑铃 Dumbbell</button>
-          <button data-v="other">📦 其他 Other</button>
-          <button data-v="all">全部 All</button>
-        </div>
-        <div class="seg" id="ovMetric">
-          <button data-v="pcs" class="active">按件数 By pcs</button>
-          <button data-v="orders">按单数 By orders</button>
-        </div>
-        <button class="btn btn-ghost btn-sm" id="ovExport">⬇ 导出Excel Export</button>
-        <span class="muted" id="ovRange"></span>
+        <div class="lbl2">From<span class="zh">从</span></div><input type="date" class="input" id="ovFrom">
+        <div class="lbl2">To<span class="zh">到</span></div><input type="date" class="input" id="ovTo">
+        <div class="lbl2">Packer<span class="zh">打包人员</span></div>
+        <select class="select" id="ovPacker" style="min-width:150px"><option value="">All packers 全部人员</option></select>
+        <button class="btn btn-primary" id="ovGo">Search<span class="zh" style="color:#dbe9ff">查询</span></button>
       </div>
       <div class="stat-row" id="ovStats"></div>
       <div class="card">
-        <div class="card-title">发货员产量 Packer output <span class="muted" style="font-weight:400">单数=包裹数 Orders = parcels · 按日均排序 Sorted by daily avg · <span style="color:var(--red)">红色 = 日均低于平均 Red = below average</span> · 点数字看SKU明细 Click a number for SKU details</span></div>
+        <div class="card-title" id="ovTitle"></div>
         <div class="tbl-wrap" id="ovTable"></div>
       </div>
     </div>
@@ -897,7 +900,7 @@ function renderImportResult() {
     <div class="row-flex"><button class="btn btn-primary" id="goW">⚖️ 查看这批的称重校验 Weight check</button><button class="btn btn-ghost" id="goO">📊 查看产量 Output</button><button class="btn btn-ghost" id="goN">继续导入 Import more</button></div>`;
   $('goW').onclick = () => { $('wFrom').value = s.from; $('wTo').value = s.to; $('wEmp').value = ''; switchPage('pageWeight'); };
   $('goO').onclick = () => {
-    setSeg('ovPeriod', 'custom'); $('ovFrom').value = s.from; $('ovTo').value = s.to; $('ovCustom').classList.remove('hidden');
+    setSeg('ovPeriod', ''); $('ovFrom').value = s.from; $('ovTo').value = s.to; $('ovPacker').value = '';
     switchPage('pageOverview');
   };
   $('goN').onclick = () => { imp = null; renderImport(); };
@@ -907,101 +910,174 @@ function setSeg(id, v) { $(id).querySelectorAll('button').forEach(b => b.classLi
 // =============================================
 // OVERVIEW
 // =============================================
-let ovRange = null, ovData = null, ovTable = null;
-const CAT_LABEL = { dumbbell: '哑铃 Dumbbell', other: '其他 Other', all: '全部 All' };
-const MET_LABEL = { pcs: '件数 Pcs', orders: '单数 Orders' };
-// 件数：SKU 数量；单数：包裹数（旧手工数据没有单数 → null）
-const pcsVal = (r, cat) => cat === 'dumbbell' ? +r.db : cat === 'other' ? +r.ot : (+r.db + +r.ot);
-const ordVal = (r, cat) => { const v = cat === 'dumbbell' ? r.do : cat === 'other' ? r.oo : r.o; return v == null ? null : +v; };
+// ---------------------------------------------------------------
+// 产量：一张表看全，不用切换。单数 = 包裹数（打一个包 = 一单）
+// ---------------------------------------------------------------
+const HELPER_MAX = 10;          // 平均每天少于 10 个包裹 = 偶尔帮忙，默认折叠
+let ovRange = null, ovData = null, ovSort = { key: 'ord', dir: -1 }, ovShowHelpers = false, ovExportData = null;
+const L2 = (en, zh) => `${en}<span class="zh">${zh}</span>`;      // 英文大字 + 中文小字
+const WD2 = ['Sun 日', 'Mon 一', 'Tue 二', 'Wed 三', 'Thu 四', 'Fri 五', 'Sat 六'];
+const dash = v => (v == null ? '—' : v === 0 ? '-' : fmt(v));
 
-async function refreshOverview() {
+async function refreshOverview(fromSearch) {
   const p = segValue('ovPeriod');
-  if (p === 'custom') {
+  if (fromSearch === true || !p) {
     const f = $('ovFrom').value, t = $('ovTo').value;
-    if (!f || !t) { $('ovTable').innerHTML = '<p class="empty">选择日期后点查询 Pick dates and click Load</p>'; return; }
     if (!checkRange(f, t)) return;
     ovRange = [f, t];
-  } else ovRange = CORE.periodRange(p, today());
+    setSeg('ovPeriod', '');                 // 自定义日期：快捷按钮都不亮
+  } else {
+    ovRange = CORE.periodRange(p, today());
+    $('ovFrom').value = ovRange[0]; $('ovTo').value = ovRange[1];
+  }
   loading('加载 Loading...');
-  try { ovData = await rpc('wh_output', { p_from: ovRange[0], p_to: ovRange[1] }); renderOverview(); }
-  catch (e) { toast('❌ ' + e.message); }
+  try {
+    ovData = await rpc('wh_output', { p_from: ovRange[0], p_to: ovRange[1] });
+    fillOvPacker();
+    renderOverview();
+  } catch (e) { toast('❌ ' + e.message); }
   loaded();
 }
 
-function aggregate(rows, cat) {
-  const by = {};
+function fillOvPacker() {
+  const cur = $('ovPacker').value;
+  const ids = [...new Set(ovData.map(r => r.e))];
+  const act = employees.filter(e => e.active || ids.includes(e.id)).sort((a, b) => a.name.localeCompare(b.name));
+  $('ovPacker').innerHTML = '<option value="">All packers 全部人员</option>' + act.map(e => `<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  if (cur && act.some(e => e.id === cur)) $('ovPacker').value = cur;
+}
+
+// 一行数据 → 哑铃件/单、其他件/单、合计件/单（旧手工数据没有单数 → null）
+function sumRows(rows) {
+  const s = { dbPcs: 0, otPcs: 0, pcs: 0, dbOrd: null, otOrd: null, ord: null };
   rows.forEach(r => {
-    const p = pcsVal(r, cat); if (!p) return;
-    const o = ordVal(r, cat);
-    const b = by[r.e] = by[r.e] || { id: r.e, pcs: 0, ord: 0, pcsWithOrd: 0, days: new Set(), ordDays: new Set(), pcsByDate: {}, ordByDate: {} };
-    b.pcs += p; b.days.add(r.d); b.pcsByDate[r.d] = (b.pcsByDate[r.d] || 0) + p;
-    if (o != null) { b.ord += o; b.pcsWithOrd += p; b.ordDays.add(r.d); b.ordByDate[r.d] = (b.ordByDate[r.d] || 0) + o; }
+    s.dbPcs += +r.db; s.otPcs += +r.ot; s.pcs += +r.db + +r.ot;
+    if (r.o != null) { s.dbOrd = (s.dbOrd || 0) + +r.do; s.otOrd = (s.otOrd || 0) + +r.oo; s.ord = (s.ord || 0) + +r.o; }
   });
-  return Object.values(by).map(b => ({
-    ...b, nd: b.days.size, nod: b.ordDays.size,
-    avgPcs: b.pcs / b.days.size,
-    avgOrd: b.ordDays.size ? b.ord / b.ordDays.size : null,
-    ppo: b.ord ? b.pcsWithOrd / b.ord : null,
-  }));
+  return s;
+}
+
+function buildPackers() {
+  const by = {};
+  ovData.forEach(r => { if (+r.db + +r.ot > 0) (by[r.e] = by[r.e] || []).push(r); });
+  return Object.entries(by).map(([id, rows]) => {
+    const s = sumRows(rows);
+    const days = new Set(rows.map(r => r.d)).size, ordDays = new Set(rows.filter(r => r.o != null).map(r => r.d)).size;
+    const avgOrd = ordDays ? s.ord / ordDays : null, avgPcs = s.pcs / days;
+    return { id, name: empName(id), ...s, days, avgOrd, avgPcs, helper: (avgOrd != null ? avgOrd : avgPcs) < HELPER_MAX };
+  });
+}
+
+function sortPackers(list) {
+  const { key, dir } = ovSort;
+  return list.sort((a, b) => {
+    if (key === 'name') return dir * a.name.localeCompare(b.name);
+    const x = a[key] ?? -1, y = b[key] ?? -1;
+    return dir * (x - y) || (b.pcs - a.pcs);
+  });
 }
 
 function renderOverview() {
-  const cat = segValue('ovCat'), met = segValue('ovMetric');
-  const [from, to] = ovRange;
-  const cut = settings.cutover_date;
-  $('ovRange').textContent = `${from}${from !== to ? ' ~ ' + to : ''}` + (cut && from < cut ? `　· ${cut} 之前为旧系统手工录入数据（只有哑铃件数，没有单数）Before ${cut}: old manual records (dumbbell pcs only, no order count)` : '');
-  const list = aggregate(ovData, cat);
-  const avgOf = b => met === 'orders' ? b.avgOrd : b.avgPcs;
-  list.sort((a, b) => (avgOf(b) ?? -1) - (avgOf(a) ?? -1));
-  const withAvg = list.filter(b => avgOf(b) != null);
-  const groupAvg = withAvg.length ? withAvg.reduce((s, b) => s + avgOf(b), 0) / withAvg.length : 0;
-  const totPcs = list.reduce((s, b) => s + b.pcs, 0), totOrd = list.reduce((s, b) => s + b.ord, 0);
-  const pd = list.reduce((s, b) => s + b.nd, 0), pod = list.reduce((s, b) => s + b.nod, 0);
-  const days = new Set(ovData.filter(r => pcsVal(r, cat) > 0).map(r => r.d)).size;
-  const hasOld = ovData.some(r => r.o == null && pcsVal(r, cat) > 0);
+  const [from, to] = ovRange, multi = from !== to;
+  const packer = $('ovPacker').value;
+  const cut = settings.cutover_date || '';
+  const rangeTxt = `${from}${multi ? ' ~ ' + to : ` (${WD2[new Date(from + 'T00:00:00').getDay()]})`}`;
+  const rows = packer ? ovData.filter(r => r.e === packer) : ovData;
+  const tot = sumRows(rows);
+  const nPackers = new Set(rows.filter(r => +r.db + +r.ot > 0).map(r => r.e)).size;
+  const oldNote = from < cut ? `<div class="stat-sub">${cut} 之前的旧数据没有包裹数 · Before ${cut}: no parcel data</div>` : '';
   $('ovStats').innerHTML = `
-    <div class="stat-box"><div class="stat-label">${CAT_LABEL[cat]} 总件数 Total pcs</div><div class="stat-value">${fmt(totPcs)}</div></div>
-    <div class="stat-box"><div class="stat-label">${CAT_LABEL[cat]} 总单数 Total orders</div><div class="stat-value">${pod ? fmt(totOrd) : '—'}</div>${hasOld ? '<div class="stat-sub">不含旧手工数据 Excl. old records</div>' : ''}</div>
-    <div class="stat-box"><div class="stat-label">发货员 Packers</div><div class="stat-value">${list.length}</div><div class="stat-sub">天数 Days ${days}</div></div>
-    <div class="stat-box"><div class="stat-label">人均日件数 Pcs/person/day</div><div class="stat-value">${pd ? Math.round(totPcs / pd) : 0}</div></div>
-    <div class="stat-box"><div class="stat-label">人均日单数 Orders/person/day</div><div class="stat-value">${pod ? (totOrd / pod).toFixed(1) : '—'}</div></div>`;
-  if (!list.length) { $('ovTable').innerHTML = '<p class="empty">这段时间没有数据 No data</p>'; ovTable = null; return; }
-  const showDates = from !== to && CORE.daysBetween(from, to) <= MAX_RANGE_DAYS;
-  const dates = showDates ? CORE.dateList(from, to).filter(d => list.some(b => b.pcsByDate[d])) : [];
-  const cellVal = (b, d) => met === 'orders' ? (b.pcsByDate[d] ? (b.ordByDate[d] ?? '—') : '') : (b.pcsByDate[d] || '');
-  // 保存给导出用
-  ovTable = { cat, met, from, to, dates, rows: list.map(b => ({ name: empName(b.id), cells: dates.map(d => cellVal(b, d)), pcs: b.pcs, ord: b.nod ? b.ord : null, ppo: b.ppo, nd: b.nd, avg: avgOf(b) })) };
-  let h = `<table class="tbl"><thead><tr><th>发货员<br><span class="en">Packer</span></th>${dates.map(d => `<th class="num">${d.slice(5)}<br><span class="en">${MET_LABEL[met].split(' ')[1]}</span></th>`).join('')}
-    <th class="num">件数合计<br><span class="en">Total pcs</span></th><th class="num">单数合计<br><span class="en">Total orders</span></th><th class="num">件/单<br><span class="en">Pcs/order</span></th>
-    <th class="num">天数<br><span class="en">Days</span></th><th class="num">日均${met === 'orders' ? '单数' : '件数'}<br><span class="en">Avg ${met === 'orders' ? 'orders' : 'pcs'}/day</span></th></tr></thead><tbody>`;
-  list.forEach(b => {
-    const a = avgOf(b), low = a != null && a < groupAvg;
-    h += `<tr><td><span class="clickable" data-person="${b.id}"><b>${esc(empName(b.id))}</b></span></td>`;
-    dates.forEach(d => { const v = cellVal(b, d); h += v !== '' ? `<td class="num clickable" data-e="${b.id}" data-f="${d}" data-t="${d}">${typeof v === 'number' ? fmt(v) : v}</td>` : '<td class="num"></td>'; });
-    h += `<td class="num clickable" data-e="${b.id}" data-f="${from}" data-t="${to}">${fmt(b.pcs)}</td><td class="num">${b.nod ? fmt(b.ord) : '—'}</td><td class="num">${b.ppo ? b.ppo.toFixed(1) : '—'}</td>
-      <td class="num">${b.nd}</td><td class="num ${low ? 'below-avg' : ''}">${a == null ? '—' : (met === 'orders' ? a.toFixed(1) : Math.round(a))}${low ? ' ↓' : ''}</td></tr>`;
-  });
-  h += '</tbody></table>';
+    <div class="stat-box big"><div class="stat-label">${L2('Parcels', '包裹数（单数）')}</div><div class="stat-value">${dash(tot.ord)}</div>${oldNote}</div>
+    <div class="stat-box"><div class="stat-label">${L2('Pieces', '件数')}</div><div class="stat-value">${fmt(tot.pcs)}</div><div class="stat-sub">Dumbbell 哑铃 ${fmt(tot.dbPcs)} · Other 其他 ${fmt(tot.otPcs)}</div></div>
+    <div class="stat-box"><div class="stat-label">${packer ? L2('Packer', '打包人员') : L2('Packers', '打包人数')}</div><div class="stat-value" style="${packer ? 'font-size:22px' : ''}">${packer ? esc(empName(packer)) : nPackers}</div><div class="stat-sub">${rangeTxt}</div></div>`;
+
+  const grp = `<tr class="grp"><th></th><th colspan="2" class="g">${L2('Dumbbell', '哑铃')}</th><th colspan="2" class="g">${L2('Other', '其他')}</th><th colspan="2" class="g">${L2('Total', '合计')}</th>${!packer && multi ? '<th colspan="2"></th>' : ''}</tr>`;
+  const sortTh = (key, en, zh, cls = 'num') => `<th class="${cls} sortable ${ovSort.key === key ? 'sorted' : ''}" data-sort="${key}">${en}${ovSort.key === key ? (ovSort.dir < 0 ? ' ▼' : ' ▲') : ''}<span class="zh">${zh}</span></th>`;
+
+  if (packer) {
+    // ---- 某个人：按天列出 ----
+    $('ovTitle').innerHTML = `${L2(esc(empName(packer)) + ' — Daily', '每日明细')} <span class="sp"></span><button class="btn btn-ghost btn-sm" id="ovAllBack">← All packers 全部人员</button>${EXPORT_BTN}`;
+    const days = [...new Set(rows.map(r => r.d))].sort().reverse();
+    if (!days.length) { $('ovTable').innerHTML = '<p class="empty">No data 没有数据</p>'; ovExportData = null; return; }
+    const maxOrd = Math.max(1, ...days.map(d => sumRows(rows.filter(r => r.d === d)).ord || 0));
+    let h = `<table class="tbl ov"><thead>${grp}<tr>
+      <th>Date<span class="zh">日期</span></th><th class="num">Pcs<span class="zh">件</span></th><th class="num">Parcels<span class="zh">包裹</span></th>
+      <th class="num">Pcs<span class="zh">件</span></th><th class="num">Parcels<span class="zh">包裹</span></th>
+      <th class="num">Pcs<span class="zh">件</span></th><th class="num">Parcels<span class="zh">包裹</span></th></tr></thead><tbody>`;
+    days.forEach(d => {
+      const s = sumRows(rows.filter(r => r.d === d));
+      h += `<tr><td>${d.slice(5)} <span class="muted">${WD2[new Date(d + 'T00:00:00').getDay()]}</span></td>
+        ${pcsCell(s.dbPcs, packer, d, d, 'dumbbell')}<td class="num">${dash(s.dbOrd)}</td>
+        ${pcsCell(s.otPcs, packer, d, d, 'other')}<td class="num">${dash(s.otOrd)}</td>
+        ${pcsCell(s.pcs, packer, d, d, 'all')}<td class="num barcell"><b>${dash(s.ord)}</b>${bar(s.ord, maxOrd)}</td></tr>`;
+    });
+    h += `<tr class="total"><td>Total<span class="zh">合计</span></td><td class="num">${dash(tot.dbPcs)}</td><td class="num">${dash(tot.dbOrd)}</td><td class="num">${dash(tot.otPcs)}</td><td class="num">${dash(tot.otOrd)}</td><td class="num">${dash(tot.pcs)}</td><td class="num"><b>${dash(tot.ord)}</b></td></tr></tbody></table>`;
+    $('ovTable').innerHTML = h;
+    ovExportData = { mode: 'person', packer: empName(packer), from, to, days: days.map(d => ({ d, ...sumRows(rows.filter(r => r.d === d)) })) };
+    return;
+  }
+
+  // ---- 全部人员 ----
+  $('ovTitle').innerHTML = `${L2('Packers', '打包人员')} <span class="muted" style="font-weight:400">· Click a column title to sort 点表头排序 · Click a name for daily details 点名字看每天明细</span><span class="sp"></span>${EXPORT_BTN}`;
+  const all = sortPackers(buildPackers());
+  if (!all.length) { $('ovTable').innerHTML = '<p class="empty">No data 没有数据</p>'; ovExportData = null; return; }
+  const main = all.filter(p => !p.helper), helpers = all.filter(p => p.helper);
+  const maxOrd = Math.max(1, ...all.map(p => p.ord || 0));
+  const row = p => `<tr><td><span class="clickable" data-packer="${p.id}"><b>${esc(p.name)}</b></span></td>
+      ${pcsCell(p.dbPcs, p.id, from, to, 'dumbbell')}<td class="num">${dash(p.dbOrd)}</td>
+      ${pcsCell(p.otPcs, p.id, from, to, 'other')}<td class="num">${dash(p.otOrd)}</td>
+      ${pcsCell(p.pcs, p.id, from, to, 'all')}<td class="num barcell"><b>${dash(p.ord)}</b>${bar(p.ord, maxOrd)}</td>
+      ${multi ? `<td class="num">${p.days}</td><td class="num">${p.avgOrd == null ? '—' : p.avgOrd.toFixed(1)}</td>` : ''}</tr>`;
+  let h = `<table class="tbl ov"><thead>${grp}<tr>${sortTh('name', 'Name', '姓名', '')}
+    ${sortTh('dbPcs', 'Pcs', '件')}${sortTh('dbOrd', 'Parcels', '包裹')}
+    ${sortTh('otPcs', 'Pcs', '件')}${sortTh('otOrd', 'Parcels', '包裹')}
+    ${sortTh('pcs', 'Pcs', '件')}${sortTh('ord', 'Parcels', '包裹')}
+    ${multi ? sortTh('days', 'Days', '出勤天数') + sortTh('avgOrd', 'Parcels/day', '日均包裹') : ''}</tr></thead><tbody>`;
+  h += main.map(row).join('');
+  if (helpers.length) {
+    h += `<tr class="helper-toggle"><td colspan="${multi ? 9 : 7}"><span class="clickable" id="ovHelpers">${ovShowHelpers ? '▾' : '▸'} Occasional helpers 偶尔帮忙 (${helpers.length}) <span class="muted">— under ${HELPER_MAX} parcels/day 平均每天少于 ${HELPER_MAX} 个包裹</span></span></td></tr>`;
+    if (ovShowHelpers) h += helpers.map(row).join('').replace(/<tr>/g, '<tr class="helper">');
+  }
+  h += `<tr class="total"><td>Total<span class="zh">合计</span></td><td class="num">${dash(tot.dbPcs)}</td><td class="num">${dash(tot.dbOrd)}</td><td class="num">${dash(tot.otPcs)}</td><td class="num">${dash(tot.otOrd)}</td><td class="num">${dash(tot.pcs)}</td><td class="num"><b>${dash(tot.ord)}</b></td>${multi ? '<td></td><td></td>' : ''}</tr></tbody></table>`;
   $('ovTable').innerHTML = h;
+  ovExportData = { mode: 'all', from, to, multi, packers: all };
 }
 
+const EXPORT_BTN = '<button class="btn btn-ghost btn-sm" id="ovExport">⬇ Export Excel 导出</button>';
+const pcsCell = (v, e, f, t, c) => v ? `<td class="num clickable" data-e="${e}" data-f="${f}" data-t="${t}" data-c="${c}" title="Click for SKU details 点击看SKU">${fmt(v)}</td>` : '<td class="num">-</td>';
+const bar = (v, max) => v ? `<div class="bar"><i style="width:${Math.max(3, Math.round(v / max * 100))}%"></i></div>` : '';
+
 function exportOverview() {
-  if (!ovTable) { toast('没有数据可导出 Nothing to export'); return; }
-  const T = ovTable;
-  const aoa = [
-    [`产量 Output · ${CAT_LABEL[T.cat]} · ${T.from}${T.from !== T.to ? ' ~ ' + T.to : ''} · 日期列为${MET_LABEL[T.met]}`],
-    ['发货员 Packer', ...T.dates, '件数合计 Total pcs', '单数合计 Total orders', '件/单 Pcs/order', '天数 Days', `日均 Avg/day (${MET_LABEL[T.met]})`],
-    ...T.rows.map(r => [r.name, ...r.cells.map(v => v === '' ? null : v), r.pcs, r.ord, r.ppo ? +r.ppo.toFixed(2) : null, r.nd, r.avg == null ? null : +r.avg.toFixed(2)]),
-  ];
-  const ws = XLSX.utils.aoa_to_sheet(aoa), wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Output');
+  if (!ovExportData) { toast('No data to export 没有数据可导出'); return; }
+  const X = ovExportData, n = v => (v == null ? null : v);
+  const head = ['Dumbbell pcs 哑铃件', 'Dumbbell parcels 哑铃包裹', 'Other pcs 其他件', 'Other parcels 其他包裹', 'Total pcs 合计件', 'Total parcels 合计包裹'];
+  const vals = s => [s.dbPcs, n(s.dbOrd), s.otPcs, n(s.otOrd), s.pcs, n(s.ord)];
+  const wb = XLSX.utils.book_new();
+  if (X.mode === 'person') {
+    const aoa = [[`${X.packer} · ${X.from} ~ ${X.to}`], ['Date 日期', ...head], ...X.days.slice().reverse().map(r => [r.d, ...vals(r)])];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), 'Daily');
+  } else {
+    const sum = [[`Output 产量 · ${X.from}${X.from !== X.to ? ' ~ ' + X.to : ''}`],
+      ['Name 姓名', ...head, 'Days 出勤天数', 'Parcels/day 日均包裹'],
+      ...X.packers.map(p => [p.name, ...vals(p), p.days, p.avgOrd == null ? null : +p.avgOrd.toFixed(2)])];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sum), 'Summary');
+    // 每日明细：每人每天一行
+    const daily = [['Date 日期', 'Name 姓名', ...head]];
+    [...ovData].sort((a, b) => a.d.localeCompare(b.d) || empName(a.e).localeCompare(empName(b.e))).forEach(r => {
+      if (+r.db + +r.ot <= 0) return;
+      daily.push([r.d, empName(r.e), ...vals(sumRows([r]))]);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(daily), 'Daily');
+  }
   const blob = new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = `Output_${T.cat}_${T.from}_${T.to}.xlsx`;
+  a.href = URL.createObjectURL(blob);
+  a.download = `Output_${X.mode === 'person' ? X.packer + '_' : ''}${X.from}_${X.to}.xlsx`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
 
+const CAT_LABEL = { dumbbell: 'Dumbbell 哑铃', other: 'Other 其他', all: 'All 全部' };
 async function showSkuDetail(ev, empId, from, to, cat) {
   try {
     const rows = await rpc('wh_output_detail', { p_emp: empId, p_from: from, p_to: to, p_cat: cat });
@@ -1350,16 +1426,22 @@ function wire() {
   dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); handleImportFile(e.dataTransfer.files[0]); });
 
   // overview
-  bindSeg('ovPeriod', v => { $('ovCustom').classList.toggle('hidden', v !== 'custom'); if (v !== 'custom') refreshOverview(); });
-  bindSeg('ovCat', () => { if (ovData) renderOverview(); });
-  bindSeg('ovMetric', () => { if (ovData) renderOverview(); });
-  $('ovExport').onclick = exportOverview;
-  $('ovGo').onclick = refreshOverview;
+  bindSeg('ovPeriod', () => refreshOverview());
+  $('ovGo').onclick = () => refreshOverview(true);
+  ['ovFrom', 'ovTo'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') refreshOverview(true); }));
+  $('ovPacker').onchange = () => { if (ovData) renderOverview(); };
+  $('ovTitle').addEventListener('click', e => {
+    if (e.target.closest('#ovAllBack')) { $('ovPacker').value = ''; renderOverview(); }
+    if (e.target.closest('#ovExport')) exportOverview();
+  });
   $('ovTable').addEventListener('click', e => {
-    const p = e.target.closest('[data-person]');
-    if (p) { $('pEmp').value = p.dataset.person; if (ovRange) $('pMonth').value = ovRange[1].slice(0, 7); switchPage('pagePerson'); return; }
+    const s = e.target.closest('[data-sort]');
+    if (s) { const k = s.dataset.sort; ovSort = ovSort.key === k ? { key: k, dir: -ovSort.dir } : { key: k, dir: k === 'name' ? 1 : -1 }; renderOverview(); return; }
+    if (e.target.closest('#ovHelpers')) { ovShowHelpers = !ovShowHelpers; renderOverview(); return; }
+    const p = e.target.closest('[data-packer]');
+    if (p) { $('ovPacker').value = p.dataset.packer; renderOverview(); return; }
     const c = e.target.closest('[data-e]');
-    if (c) showSkuDetail(e, c.dataset.e, c.dataset.f, c.dataset.t, segValue('ovCat'));
+    if (c) showSkuDetail(e, c.dataset.e, c.dataset.f, c.dataset.t, c.dataset.c);
   });
 
   // weight
